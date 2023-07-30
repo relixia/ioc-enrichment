@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "ioc-enrichment"
+version = "0.1.0"
+description = "ioc enrichment project"
+authors = ["Buğra Çayır"]
+readme = "README.md"
+packages = [{include = "ioc_enrichment"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+celery = "^5.3.1"
+redis = "^4.6.0"
+sqlalchemy = "^2.0.19"
+psycopg2 = "^2.9.6"
+fastapi = "^0.100.1"
+uvicorn = {extras = ["standard"], version = "^0.23.1"}
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
