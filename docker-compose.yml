@@ -22,3 +22,15 @@ services:
     volumes:
       - .:/app/
     working_dir: /app/src
+
+  fastapi_app:
+    build: .
+    command: python3 main.py
+    depends_on:
+      - rabbitmq
+      - redis
+    volumes:
+      - .:/app/
+    working_dir: /app/src
+    ports:
+      - "8000:8000"
