@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>IoC Enrichment Service by Brandefense</title>
+</head>
+<body>
+    <h1>IoC Enrichment Service by Brandefense - Result Page</h1>
+
+    {% if input_type and input_text %}
+    <p>You entered {{ input_type }}: {{ input_text }}</p>
+    {% elif sha256_hash %}
+    <p>File uploaded successfully!</p>
+    <p>SHA-256 Hash: {{ sha256_hash }}</p>
+    {% else %}
+    <p>No input or file uploaded.</p>
+    {% endif %}
+
+</body>
+</html>
