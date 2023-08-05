@@ -3,7 +3,7 @@ from fastapi import FastAPI, Request, Form, File, UploadFile
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from celery_base import app
-from tasks import virustotal_url, virustotal_file, virustotal_ip, ipinfo
+from tasks import virustotal_url, virustotal_file, virustotal_ip, ipinfo, abuseipdb
 import uvicorn
 import jinja2
 from utilities import check_input_type, calculate_file_hash, ioc_save_db
@@ -44,7 +44,8 @@ async def search(
             virustotal_file.delay(input_text)
         elif input_type == "IP Address":
             #virustotal_ip.delay(input_text)
-            ipinfo.delay(input_text)
+            #ipinfo.delay(input_text)
+            abuseipdb.delay(input_text)
     elif input_file is not None:
         file_content = await input_file.read()
         file_name = input_file.filename

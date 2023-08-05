@@ -11,6 +11,7 @@ load_dotenv(dotenv_path=envs_path)
 
 VIRUSTOTAL_API = os.getenv("VIRUSTOTAL_API")
 IPINFO_API = os.getenv("IPINFO_API")
+ABUSEIPDB_API = os.getenv("ABUSEIPDB_API")
 
 
 #AlienVault OTX: Ağ trafiğini izleyen ve zararlı davranışları algılayan açık tehdit istihbaratı platformu.
@@ -106,6 +107,47 @@ def ipinfo(user_ip):
             session.commit()
         session.close()
 
+@app.task
+def abuseipdb(user_ip):
+    url = "https://api.abuseipdb.com/api/v2/check"
+    params = {
+        "ipAddress": user_ip,
+        "maxAgeInDays": 90,
+        "verbose": True
+    }
+    headers = {
+        "Key": ABUSEIPDB_API,
+        "Accept": "application/json"
+    }
+    response = requests.get(url, params=params, headers=headers)
+    if response.status_code == 200:
+        data = response.json()
+        abuse_info = {
+            "ip": data["data"]["ipAddress"],
+            "is_public": data["data"]["isPublic"],
+            "ip_version": data["data"]["ipVersion"],
+            "is_whitelisted": data["data"]["isWhitelisted"],
+            "abuse_confidence_score": data["data"]["abuseConfidenceScore"],
+            "country_code": data["data"]["countryCode"],
+            "usage_type": data["data"]["usageType"],
+            "isp": data["data"]["isp"],
+            "domain": data["data"]["domain"],
+            "hostnames": data["data"]["hostnames"],
+            "total_reports": data["data"]["totalReports"],
+            "num_distinct_users": data["data"]["numDistinctUsers"],
+            "last_reported_at": data["data"]["lastReportedAt"]
+        }
+
+        abuse_info_json = json.dumps(abuse_info)
+
+        session = Session()
+        url_row = session.query(IOC).filter_by(ioc=user_ip).first()
+
+        if url_row:
+            url_row.abuseipdb = abuse_info_json
+            session.commit()
+        session.close()
+    
 
 #----------------------------------------------------FOR FILES IOCS-------------------------------------------------------------
 # URLhaus: Zararlı URL'leri içeren bir veritabanı.
