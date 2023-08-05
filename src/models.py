@@ -35,5 +35,5 @@ class IOC(Base):
     greynoise = Column(String, default="No data from this service")
     opswat = Column(String, default="No data from this service")
     opswat_file_reputation = Column(String, default="No data from this service")
-
+    kaspersky = Column(String, default="No data from this service")
 

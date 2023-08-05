@@ -14,6 +14,7 @@ IPINFO_API = os.getenv("IPINFO_API")
 ABUSEIPDB_API = os.getenv("ABUSEIPDB_API")
 GREYNOISE_API = os.getenv("GREYNOISE_API")
 OPSWAT_API = os.getenv("OPSWAT_API")
+KASPERSKY_API = os.getenv("KASPERSKY_API")
 
 
 #AlienVault OTX: Ağ trafiğini izleyen ve zararlı davranışları algılayan açık tehdit istihbaratı platformu.
@@ -26,7 +27,6 @@ OPSWAT_API = os.getenv("OPSWAT_API")
 # Shodan: İnternet üzerindeki cihazlar için açık port ve servis bilgisi sağlayan bir hizmet.
 @app.task
 def virustotal_url(user_url):
-    print("virustotal scanning for url started")
     # VIRUSTOTAL POST API TO GET THE SCAN URL ID
     url = "https://www.virustotal.com/api/v3/urls"
     payload = {"url": user_url}
@@ -51,10 +51,76 @@ def virustotal_url(user_url):
     else:
         return None
 
+@app.task
+def kaspersky_url(user_url):
+    url = f"https://opentip.kaspersky.com/api/v1/search/url?request={user_url}"
+    headers = { 
+        "x-api-key": KASPERSKY_API
+    }
+    response = requests.request("GET", url, headers=headers)
+
+    if response.status_code == 200:
+        data = response.json()
+
+        url_general_info = data.get("UrlGeneralInfo", {})
+        url_domain_whois_info = data.get("UrlDomainWhoIs", {})
+
+        kaspersky_url_info = {
+            "url": url_general_info.get("Url"),
+            "host": url_general_info.get("Host"),
+            "ipv4_count": url_general_info.get("Ipv4Count"),
+            "files_count": url_general_info.get("FilesCount"),
+            "categories": url_general_info.get("Categories"),
+            "categories_with_zone": [
+                {
+                    "name": category.get("Name"),
+                    "zone": category.get("Zone")
+                }
+                for category in url_general_info.get("CategoriesWithZone", [])
+            ],
+            "domain_name": url_domain_whois_info.get("DomainName"),
+            "created": url_domain_whois_info.get("Created"),
+            "updated": url_domain_whois_info.get("Updated"),
+            "expires": url_domain_whois_info.get("Expires"),
+            "name_servers": url_domain_whois_info.get("NameServers"),
+            "contacts": [
+                {
+                    "contact_type": contact.get("ContactType"),
+                    "name": contact.get("Name"),
+                    "organization": contact.get("Organization"),
+                    "address": contact.get("Address"),
+                    "city": contact.get("City"),
+                    "state": contact.get("State"),
+                    "postal_code": contact.get("PostalCode"),
+                    "country_code": contact.get("CountryCode"),
+                    "phone": contact.get("Phone"),
+                    "fax": contact.get("Fax"),
+                    "email": contact.get("Email")
+                }
+                for contact in url_domain_whois_info.get("Contacts", [])
+            ],
+            "registrar": {
+                "info": url_domain_whois_info.get("Registrar", {}).get("Info"),
+                "iana_id": url_domain_whois_info.get("Registrar", {}).get("IanaId")
+            },
+            "domain_status": url_domain_whois_info.get("DomainStatus"),
+            "registration_organization": url_domain_whois_info.get("RegistrationOrganization")
+        }
+
+        kaspersky_url_info_json = json.dumps(kaspersky_url_info)
+
+        session = Session()
+        url_row = session.query(IOC).filter_by(ioc=user_url).first()
+
+        if url_row:
+            url_row.kaspersky = kaspersky_url_info_json
+            session.commit()
+        session.close()
+
 #----------------------------------------------------FOR DOMAIN IOCS-------------------------------------------------------------
 @app.task
 def virustotal_domain(user_domain):
-    url = "https://www.virustotal.com/api/v3/domains/domain"
+    url = f"https://www.virustotal.com/api/v3/domains/{user_domain}"
     headers = {
         "accept": "application/json",
         "x-apikey": VIRUSTOTAL_API
@@ -64,6 +130,65 @@ def virustotal_domain(user_domain):
     if response.status_code == 200:
         virustotal_save(response=response, ioc_name=user_domain)
 
+@app.task
+def kaspersky_domain(user_domain):
+    url = f"https://opentip.kaspersky.com/api/v1/search/domain?request={user_domain}"
+    headers = { 
+        "x-api-key": KASPERSKY_API
+    }
+    response = requests.request("GET", url, headers=headers)
+
+    if response.status_code == 200:
+        data = response.json()
+
+        domain_general_info = data.get("DomainGeneralInfo", {})
+        domain_whois_info = data.get("DomainWhoIsInfo", {})
+
+        kaspersky_domain_info = {
+            "domain": domain_general_info.get("Domain"),
+            "files_count": domain_general_info.get("FilesCount"),
+            "urls_count": domain_general_info.get("UrlsCount"),
+            "hits_count": domain_general_info.get("HitsCount"),
+            "ipv4_count": domain_general_info.get("Ipv4Count"),
+            "categories": domain_general_info.get("Categories"),
+            "categories_with_zone": [
+                {
+                    "name": category.get("Name"),
+                    "zone": category.get("Zone")
+                }
+                for category in domain_general_info.get("CategoriesWithZone", [])
+            ],
+            "domain_name": domain_whois_info.get("DomainName"),
+            "created": domain_whois_info.get("Created"),
+            "updated": domain_whois_info.get("Updated"),
+            "expires": domain_whois_info.get("Expires"),
+            "name_servers": domain_whois_info.get("NameServers"),
+            "contacts": [
+                {
+                    "contact_type": contact.get("ContactType"),
+                    "organization": contact.get("Organization"),
+                    "state": contact.get("State"),
+                    "country_code": contact.get("CountryCode")
+                }
+                for contact in domain_whois_info.get("Contacts", [])
+            ],
+            "registrar": {
+                "info": domain_whois_info.get("Registrar", {}).get("Info"),
+                "iana_id": domain_whois_info.get("Registrar", {}).get("IanaId")
+            },
+            "domain_status": domain_whois_info.get("DomainStatus"),
+            "registration_organization": domain_whois_info.get("RegistrationOrganization")
+        }
+
+        kaspersky_domain_info_json = json.dumps(kaspersky_domain_info)
+
+        session = Session()
+        url_row = session.query(IOC).filter_by(ioc=user_domain).first()
+
+        if url_row:
+            url_row.kaspersky = kaspersky_domain_info_json
+            session.commit()
+        session.close()    
 
 #----------------------------------------------------FOR IP ADDRESS IOCS-------------------------------------------------------------
 # https://api.iplocation.net
@@ -187,6 +312,50 @@ def greynoise(user_ip):
         session.commit()
     session.close()
 
+@app.task
+def kaspersky_ip(user_ip):
+    url = f"https://opentip.kaspersky.com/api/v1/search/ip?request={user_ip}"
+    headers = { 
+        "x-api-key": KASPERSKY_API
+    }
+    response = requests.request("GET", url, headers=headers)
+
+    if response.status_code == 200:
+        data = response.json()
+
+        ip_general_info = data.get("IpGeneralInfo", {})
+        ip_whois = data.get("IpWhoIs", {})
+
+        kaspersky_ip_info = {
+            "ip": ip_general_info.get("Ip"),
+            "status": ip_general_info.get("Status"),
+            "country_code": ip_general_info.get("CountryCode"),
+            "asn": [
+                {
+                    "number": asn.get("Number"),
+                    "description": asn.get("Description")[0] if asn.get("Description") else None
+                }
+                for asn in ip_whois.get("Asn", [])
+            ],
+            "net": {
+                "range_start": ip_whois["Net"].get("RangeStart"),
+                "range_end": ip_whois["Net"].get("RangeEnd"),
+                "created": ip_whois["Net"].get("Created"),
+                "changed": ip_whois["Net"].get("Changed"),
+                "name": ip_whois["Net"].get("Name")
+            }
+        }
+
+        kaspersky_ip_info_json = json.dumps(kaspersky_ip_info)
+
+        session = Session()
+        url_row = session.query(IOC).filter_by(ioc=user_ip).first()
+
+        if url_row:
+            url_row.kaspersky = kaspersky_ip_info_json
+            session.commit()
+        session.close()
+
 #----------------------------------------------------FOR FILES IOCS-------------------------------------------------------------
 # URLhaus: Zararlı URL'leri içeren bir veritabanı.
 @app.task
@@ -200,6 +369,51 @@ def virustotal_file(user_hash):
 
     if response.status_code == 200:
         virustotal_save(response=response, ioc_name=user_hash)
+
+@app.task
+def kaspersky_file(user_hash):
+    url = f"https://opentip.kaspersky.com/api/v1/search/hash?request={user_hash}"
+    headers = { 
+        "x-api-key": KASPERSKY_API
+    }
+    response = requests.request("GET", url, headers=headers)
+
+    if response.status_code == 200:
+        data = response.json()
+
+        file_general_info = data.get("FileGeneralInfo", {})
+        detections_info = data.get("DetectionsInfo", [])
+
+        kaspersky_info = {
+            "md5": file_general_info.get("Md5"),
+            "sha1": file_general_info.get("Sha1"),
+            "sha256": file_general_info.get("Sha256"),
+            "file_status": file_general_info.get("FileStatus"),
+            "first_seen": file_general_info.get("FirstSeen"),
+            "last_seen": file_general_info.get("LastSeen"),
+            "size": file_general_info.get("Size"),
+            "file_type": file_general_info.get("Type"),
+            "hits_count": file_general_info.get("HitsCount"),
+            "detections": [
+                {
+                    "last_detect_date": detection.get("LastDetectDate"),
+                    "description_url": detection.get("DescriptionUrl"),
+                    "zone": detection.get("Zone"),
+                    "detection_name": detection.get("DetectionName")
+                }
+                for detection in detections_info
+            ]
+        }
+
+        kaspersky_info_json = json.dumps(kaspersky_info)
+
+        session = Session()
+        url_row = session.query(IOC).filter_by(ioc=user_hash).first()
+
+        if url_row:
+            url_row.kaspersky = kaspersky_info_json
+            session.commit()
+        session.close()
 
 @app.task
 def opswat(user_hash):
