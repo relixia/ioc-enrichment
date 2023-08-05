@@ -1,5 +1,15 @@
 version: "3.8"
 services:
+  db:
+      image: postgres
+      restart: always
+      env_file: 
+        - ./envs/.env
+      volumes:
+        - ./data:/var/lib/postgresql/data
+      ports:
+        - 5432:5432
+
   rabbitmq:
     image: rabbitmq:latest
     environment:
@@ -19,6 +29,7 @@ services:
     depends_on:
       - rabbitmq
       - redis
+      - db
     volumes:
       - .:/app/
     working_dir: /app/src
@@ -29,6 +40,7 @@ services:
     depends_on:
       - rabbitmq
       - redis
+      - db
     volumes:
       - .:/app/
     working_dir: /app/src

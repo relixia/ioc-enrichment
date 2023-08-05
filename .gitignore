@@ -125,3 +125,6 @@ dmypy.json
 
 # Ignore dynaconf secret files
 .secrets.*
+
+#postgresql database
+data/

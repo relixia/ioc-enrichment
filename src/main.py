@@ -3,11 +3,12 @@ from fastapi import FastAPI, Request, Form, File, UploadFile
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from celery_base import app
-from tasks import say_hello
+from tasks import virustotal_url
 import uvicorn
 import jinja2
-from utilities import check_input_type, calculate_file_hash
+from utilities import check_input_type, calculate_file_hash, ioc_save_db
 from fastapi.staticfiles import StaticFiles
+from models import Base, Session, IOC, engine
 
 
 app_fastapi = FastAPI()
@@ -35,20 +36,20 @@ async def search(
         input_type = check_input_type(input_text)
         print("Input Text:", input_text)
         print("Input Type:", input_type)
+        ioc_save_db(input_text, input_type)
+        if input_type == "URL":
+            virustotal_url.delay(input_text)
     elif input_file is not None:
-        # File form submission
         file_content = await input_file.read()
         file_name = input_file.filename
         print("Uploaded File Name:", file_name)
 
-        # Calculate the file hash
         sha256_hash = calculate_file_hash(file_content)
         print("SHA-256 Hash:", sha256_hash)
+        ioc_save_db(sha256_hash, "File/File Hash")
     else:
-        # Neither input_text nor input_file provided, set sha256_hash to None
         sha256_hash = None
 
-    # Return the processed result back to the frontend
     return templates.TemplateResponse(
         "result.html",
         {
@@ -61,4 +62,5 @@ async def search(
 
 
 if __name__ == "__main__":
+    Base.metadata.create_all(engine)
     uvicorn.run(app_fastapi, host="0.0.0.0", port=8000)
