@@ -32,5 +32,6 @@ class IOC(Base):
     virustotal = Column(String, default="No data from this service")
     ipinfo = Column(String, default="No data from this service")
     abuseipdb = Column(String, default="No data from this service")
+    greynoise = Column(String, default="No data from this service")
 
 

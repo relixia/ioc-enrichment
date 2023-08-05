@@ -12,6 +12,7 @@ load_dotenv(dotenv_path=envs_path)
 VIRUSTOTAL_API = os.getenv("VIRUSTOTAL_API")
 IPINFO_API = os.getenv("IPINFO_API")
 ABUSEIPDB_API = os.getenv("ABUSEIPDB_API")
+GREYNOISE_API = os.getenv("GREYNOISE_API")
 
 
 #AlienVault OTX: Ağ trafiğini izleyen ve zararlı davranışları algılayan açık tehdit istihbaratı platformu.
@@ -64,8 +65,6 @@ def virustotal_domain(user_domain):
 
 
 #----------------------------------------------------FOR IP ADDRESS IOCS-------------------------------------------------------------
-# AbuseIPDB: Zararlı IP adresleri hakkında bilgi sunan bir hizmet.
-# GreyNoise: İnternet gürültüsü ve zararlı IP adresleri arasındaki farkı belirleyen bir hizmet.
 # https://api.iplocation.net
 @app.task
 def virustotal_ip(user_ip):
@@ -148,6 +147,44 @@ def abuseipdb(user_ip):
             session.commit()
         session.close()
     
+@app.task
+def greynoise(user_ip):
+    url = f"https://api.greynoise.io/v3/community/{user_ip}"
+    headers = {
+        "accept": "application/json",
+        "key": GREYNOISE_API
+    }
+    response = requests.get(url, headers=headers)
+    
+    data = response.json()
+    if "classification" in data:
+        greynoise_info = {
+        "ip": data["ip"],
+        "noise": data["noise"],
+        "riot": data["riot"],
+        "classification": data["classification"],
+        "name": data["name"],
+        "link": data["link"],
+        "last_seen": data["last_seen"],
+        "message": data["message"]
+        }
+    else:
+        greynoise_info = {
+            "ip": data["ip"],
+            "noise": data["noise"],
+            "riot": data["riot"],
+            "message": data["message"]
+        }
+
+    greynoise_info_json = json.dumps(greynoise_info)
+
+    session = Session()
+    url_row = session.query(IOC).filter_by(ioc=user_ip).first()
+
+    if url_row:
+        url_row.greynoise = greynoise_info_json
+        session.commit()
+    session.close()
 
 #----------------------------------------------------FOR FILES IOCS-------------------------------------------------------------
 # URLhaus: Zararlı URL'leri içeren bir veritabanı.
