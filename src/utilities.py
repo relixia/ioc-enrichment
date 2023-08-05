@@ -3,6 +3,7 @@ import hashlib
 from models import IOC, Session, engine
 from sqlalchemy.orm import sessionmaker
 import uuid
+import json
 
 Session = sessionmaker(bind=engine)
 
@@ -18,7 +19,7 @@ def check_input_type(input_text):
         return "File Hash"
     else:
         return "Invalid Input"
-        
+
 def calculate_file_hash(file_content):
     sha256_hash = hashlib.sha256()
     sha256_hash.update(file_content)
@@ -32,4 +33,18 @@ def ioc_save_db(ioc, ioc_type):
     session = Session()
     session.add(url_data)
     session.commit()
+    session.close()
+
+def virustotal_save(response, ioc_name):
+    data = response.json()
+    virustotal_data = data["data"]["attributes"]["last_analysis_results"]
+    # Convert the 'virustotal_data' dictionary to a JSON string
+    virustotal_json = json.dumps(virustotal_data)
+
+    session = Session()
+    url_row = session.query(IOC).filter_by(ioc=ioc_name).first()
+
+    if url_row:
+        url_row.virustotal = virustotal_json
+        session.commit()
     session.close()
