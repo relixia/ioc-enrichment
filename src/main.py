@@ -3,7 +3,7 @@ from fastapi import FastAPI, Request, Form, File, UploadFile
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from celery_base import app
-from tasks import virustotal_url, virustotal_file, virustotal_ip, ipinfo, abuseipdb, greynoise
+from tasks import virustotal_url, virustotal_file, virustotal_ip, ipinfo, abuseipdb, greynoise, opswat, opswat_file_reputation
 import uvicorn
 import jinja2
 from utilities import check_input_type, calculate_file_hash, ioc_save_db
@@ -41,7 +41,9 @@ async def search(
         elif input_type == "Domain":
             print("todo")
         elif input_type == "File Hash":
-            virustotal_file.delay(input_text)
+            #virustotal_file.delay(input_text)
+            opswat.delay(input_text)
+            opswat_file_reputation.delay(input_text)
         elif input_type == "IP Address":
             #virustotal_ip.delay(input_text)
             #ipinfo.delay(input_text)
@@ -55,7 +57,9 @@ async def search(
         sha256_hash = calculate_file_hash(file_content)
         print("SHA-256 Hash:", sha256_hash)
         ioc_save_db(sha256_hash, "File/File Hash")
-        virustotal_file.delay(sha256_hash)
+        #virustotal_file.delay(sha256_hash)
+        opswat.delay(sha256_hash)
+        opswat_file_reputation.delay(sha256_hash)
     else:
         sha256_hash = None
 

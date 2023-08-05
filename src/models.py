@@ -33,5 +33,7 @@ class IOC(Base):
     ipinfo = Column(String, default="No data from this service")
     abuseipdb = Column(String, default="No data from this service")
     greynoise = Column(String, default="No data from this service")
+    opswat = Column(String, default="No data from this service")
+    opswat_file_reputation = Column(String, default="No data from this service")
 
 
