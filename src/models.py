@@ -45,4 +45,5 @@ class IOC(Base):
     usom = Column(String, default="No data from this service")
     openphish = Column(String, default="No data from this service")
     shodan = Column(String, default="No data from this service")
+    abstract_email = Column(String, default="No data from this service")
     cloudflare_email = Column(String, default="No data from this service")

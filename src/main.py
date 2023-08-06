@@ -3,7 +3,7 @@ from fastapi import FastAPI, Request, Form, File, UploadFile
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from celery_base import app
-from tasks import virustotal_url, virustotal_file, virustotal_ip, virustotal_domain, ipinfo, abuseipdb, greynoise, opswat, opswat_file_reputation, kaspersky_file, kaspersky_ip, kaspersky_domain, kaspersky_url, hybridana_file, urlscanio, criminalip_ip, criminalip_domain, cloudflare_email, cloudflare_ip, iplocation, urlhaus, phishtank, usom, openphish, shodan, ipqualityscore, ipqualityscore_email  
+from tasks import virustotal_url, virustotal_file, virustotal_ip, virustotal_domain, ipinfo, abuseipdb, greynoise, opswat, opswat_file_reputation, kaspersky_file, kaspersky_ip, kaspersky_domain, kaspersky_url, hybridana_file, urlscanio, criminalip_ip, criminalip_domain, cloudflare_email, cloudflare_ip, iplocation, urlhaus, phishtank, usom, openphish, shodan, ipqualityscore, ipqualityscore_email, abstract_email  
 import uvicorn
 import jinja2
 from utilities import check_input_type, calculate_file_hash, ioc_save_db
@@ -72,6 +72,7 @@ async def search(
             shodan.delay(input_text)
         elif input_type == "Email Address":
             ipqualityscore_email.delay(input_text)
+            abstract_email.delay(input_text)
 
     elif input_file is not None:
         file_content = await input_file.read()

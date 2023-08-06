@@ -21,6 +21,7 @@ CLOUDFLARE_API = os.getenv("CLOUDFLARE_API")
 CLOUDFLARE_EMAIL = os.getenv("CLOUDFLARE_EMAIL")
 SHODAN_API = os.getenv("SHODAN_API")
 IPQUALITYSCORE_API = os.getenv("IPQUALITYSCORE_API")
+ABSTRACT_API = os.getenv("ABSTRACT_API")
 # iplocation is also used
 # urlhaus is also used
 # phishtank is also used
@@ -795,3 +796,15 @@ def ipqualityscore_email(user_email):
             session.commit()
         session.close()
 
+@app.task
+def abstract_email(user_email):
+    url = f"https://emailvalidation.abstractapi.com/v1/?api_key={ABSTRACT_API}&email={user_email}"
+    response = requests.get(url)
+    if response.status_code == 200:
+        scan_data = response.json()
+        session = Session()
+        url_row = session.query(IOC).filter_by(ioc=user_email).first()
+        if url_row:
+            url_row.abstract_email = json.dumps(scan_data)
+            session.commit()
+        session.close()
