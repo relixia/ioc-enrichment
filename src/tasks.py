@@ -20,6 +20,8 @@ URLSCANIO_API = os.getenv("URLSCANIO_API")
 CRIMINALIP_API = os.getenv("CRIMINALIP_API")
 CLOUDFLARE_API = os.getenv("CLOUDFLARE_API")
 CLOUDFLARE_EMAIL = os.getenv("CLOUDFLARE_EMAIL")
+# iplocation is also used
+
 
 
 #AlienVault OTX: Ağ trafiğini izleyen ve zararlı davranışları algılayan açık tehdit istihbaratı platformu.
@@ -236,7 +238,6 @@ def criminalip_domain(user_domain):
         session.close()
 
 #----------------------------------------------------FOR IP ADDRESS IOCS-------------------------------------------------------------
-# https://api.iplocation.net
 @app.task
 def virustotal_ip(user_ip):
     url = f"https://www.virustotal.com/api/v3/ip_addresses/{user_ip}"
@@ -433,7 +434,6 @@ def cloudflare_ip(user_ip):
         "ip": user_ip
     }
     response = requests.request("GET", url, headers=headers)
-    print(response)
     if response.status_code == 200:
         data = response.json()
         cloudflare_info_json = json.dumps(data)
@@ -442,6 +442,21 @@ def cloudflare_ip(user_ip):
 
         if url_row:
             url_row.cloudflare = cloudflare_info_json
+            session.commit()
+        session.close()
+
+@app.task
+def iplocation(user_ip):
+    url = f"https://api.iplocation.net/?ip={user_ip}"
+    response = requests.request("GET", url)
+    if response.status_code == 200:
+        data = response.json()
+        iplocation_info_json = json.dumps(data)
+        session = Session()
+        url_row = session.query(IOC).filter_by(ioc=user_ip).first()
+
+        if url_row:
+            url_row.iplocation = iplocation_info_json
             session.commit()
         session.close()
 

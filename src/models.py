@@ -40,4 +40,5 @@ class IOC(Base):
     urlscanio = Column(String, default="No data from this service")
     criminalip = Column(String, default="No data from this service")
     cloudflare = Column(String, default="No data from this service")
+    iplocation = Column(String, default="No data from this service")
     cloudflare_email = Column(String, default="No data from this service")
