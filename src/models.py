@@ -44,4 +44,5 @@ class IOC(Base):
     urlhaus = Column(String, default="No data from this service")
     phishtank = Column(String, default="No data from this service")
     usom = Column(String, default="No data from this service")
+    openphish = Column(String, default="No data from this service")
     cloudflare_email = Column(String, default="No data from this service")

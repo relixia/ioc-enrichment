@@ -84,3 +84,16 @@ def check_usom(url_to_check):
         
     return False
 
+def check_openphish(url_to_check):
+    openphish_url = "https://openphish.com/feed.txt"
+    response = requests.get(openphish_url)
+    
+    if response.status_code != 200:
+        print("Failed to download the OpenPhish malicious URL database.")
+        return False
+
+    openphish_data = response.text.splitlines()
+    if url_to_check in openphish_data:
+        return True
+        
+    return False

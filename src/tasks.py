@@ -1,6 +1,6 @@
 from celery_base import app
 from models import Base, Session, IOC
-from utilities import virustotal_save, check_phishtank, check_usom
+from utilities import virustotal_save, check_phishtank, check_usom, check_openphish
 import requests
 import os
 import json
@@ -25,6 +25,7 @@ CLOUDFLARE_EMAIL = os.getenv("CLOUDFLARE_EMAIL")
 # urlhaus is also used
 # phishtank is also used
 # usom is also used
+# openphish is also used
 
 
 
@@ -32,7 +33,6 @@ CLOUDFLARE_EMAIL = os.getenv("CLOUDFLARE_EMAIL")
 
 
 #----------------------------------------------------FOR URL IOCS-------------------------------------------------------------
-# Kendi phishing servisim --> PhishStats, OpenPhish
 # Google reklamlar: https://adstransparency.google.com/?region=anywhere
 # Shodan: İnternet üzerindeki cihazlar için açık port ve servis bilgisi sağlayan bir hizmet.
 @app.task
@@ -182,6 +182,22 @@ def phishtank(user_url):
 
     session.close()
     
+@app.task
+def openphish(user_url):
+    session = Session()
+    url_row = session.query(IOC).filter_by(ioc=user_url).first()
+
+    if check_openphish(user_url):
+        if url_row:
+            url_row.openphish = "The url provided is in the OpenPhish malicious URL database. BE CAREFUL!"
+            session.commit()
+    else:
+        if url_row:
+            url_row.openphish = "The url provided is NOT in the OpenPhish malicious URL database."
+            session.commit()
+
+    session.close()
+
 
 #----------------------------------------------------FOR DOMAIN IOCS-------------------------------------------------------------
 @app.task
