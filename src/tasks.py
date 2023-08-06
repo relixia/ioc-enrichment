@@ -3,6 +3,7 @@ from models import Base, Session, IOC
 from utilities import virustotal_save, check_phishtank, check_usom, check_openphish
 import requests, os, json, csv
 from dotenv import load_dotenv
+from urllib.parse import quote
 
 envs_path = os.path.join(os.path.dirname(__file__), "../envs/.env")
 load_dotenv(dotenv_path=envs_path)
@@ -19,6 +20,7 @@ CRIMINALIP_API = os.getenv("CRIMINALIP_API")
 CLOUDFLARE_API = os.getenv("CLOUDFLARE_API")
 CLOUDFLARE_EMAIL = os.getenv("CLOUDFLARE_EMAIL")
 SHODAN_API = os.getenv("SHODAN_API")
+IPQUALITYSCORE_API = os.getenv("IPQUALITYSCORE_API")
 # iplocation is also used
 # urlhaus is also used
 # phishtank is also used
@@ -145,9 +147,7 @@ def urlhaus(user_url):
     data = {
         "url": user_url
     }
-    response = requests.post(url, data=data)
-    print(response)
-    
+    response = requests.post(url, data=data)    
     if response.status_code == 200:
         scan_data = response.json()
         session = Session()
@@ -161,34 +161,46 @@ def urlhaus(user_url):
 def phishtank(user_url):
     session = Session()
     url_row = session.query(IOC).filter_by(ioc=user_url).first()
-
-    if check_phishtank(user_url):
-        if url_row:
+    if url_row:
+        if check_phishtank(user_url):
             url_row.phishtank = "The url provided is in the PhishTank database and it is SUSPICIOUS / MALICIOUS. Be careful!"
             session.commit()
-    else:
-        if url_row:
+        else:
             url_row.phishtank = "The url provided is NOT in the PhishTank database."
             session.commit()
-
     session.close()
     
 @app.task
 def openphish(user_url):
     session = Session()
     url_row = session.query(IOC).filter_by(ioc=user_url).first()
-
-    if check_openphish(user_url):
-        if url_row:
+    if url_row:
+        if check_openphish(user_url):
             url_row.openphish = "The url provided is in the OpenPhish malicious URL database. BE CAREFUL!"
             session.commit()
-    else:
-        if url_row:
+        else:
             url_row.openphish = "The url provided is NOT in the OpenPhish malicious URL database."
             session.commit()
-
     session.close()
 
+@app.task
+def ipqualityscore(user_url): #BOTH FOR URL AND DOMAIN
+    user_url_in_db = user_url
+    if user_url.startswith("http://"):
+        user_url = user_url[len("http://"):]
+    elif user_url.startswith("https://"):
+        user_url = user_url[len("https://"):]
+    encoded_url = quote(user_url)
+    url = f"https://www.ipqualityscore.com/api/json/url/{IPQUALITYSCORE_API}/{encoded_url}"
+    response = requests.post(url)
+    if response.status_code == 200:
+        scan_data = response.json()
+        session = Session()
+        url_row = session.query(IOC).filter_by(ioc=user_url_in_db).first()
+        if url_row:
+            url_row.ipqualityscore = json.dumps(scan_data)
+            session.commit()
+        session.close()
 
 #----------------------------------------------------FOR DOMAIN IOCS-------------------------------------------------------------
 @app.task
