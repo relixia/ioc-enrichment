@@ -2,18 +2,165 @@
 <html>
 <head>
     <title>IoC Enrichment Service by Brandefense</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f2f2f2;
+            background-image: url("/static/result_background_ba.jpg");
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            max-width: 800px;
+            padding: 80px;
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            position: relative;
+        }
+
+        .logo {
+            position: absolute;
+            top: 20px; /* Adjust the top value to position the logo inside the container */
+            left: 50%;
+            transform: translateX(-50%);
+            width: 300px;
+            height: auto;
+        }
+
+        h1 {
+            color: #007bff;
+            font-size: 36px;
+            margin-bottom: 20px;
+        }
+
+        p {
+            color: #333;
+            font-size: 18px;
+        }
+
+        /* Stylish buttons for services */
+        .service-button {
+            cursor: pointer;
+            margin: 10px;
+            padding: 12px 16px;
+            background-color: #2e78c8;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            font-size: 13px;
+            transition: background-color 0.3s ease;
+        }
+
+        .service-button:hover {
+            background-color: #0056b3;
+        }
+
+        /* Card-like design for service data */
+        .service-card {
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            display: none;
+            width: 90%;
+        }
+
+        /* Stylish icon for service card */
+        .service-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        /* Buttons on the left and right of the container */
+        .buttons-left,
+        .buttons-right {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: absolute;
+            top: 50%;
+            transform: translateY(-16%);
+        }
+
+        .buttons-left {
+            left: 20px;
+        }
+
+        .buttons-right {
+            right: 20px;
+        }
+    </style>
 </head>
 <body>
-    <h1>IoC Enrichment Service by Brandefense - Result Page</h1>
+    <div class="buttons-left">
+        <!-- Stylish buttons for each service on the left -->
+        {% for service in services %}
+        <button class="service-button" onclick="showServiceData('{{ service }}')">
+            <i class="service-icon fas fa-cog"></i> {{ service }}
+        </button>
+        {% endfor %}
+    </div>
 
-    {% if input_type and input_text %}
-    <p>You entered {{ input_type }}: {{ input_text }}</p>
-    {% elif sha256_hash %}
-    <p>File uploaded successfully!</p>
-    <p>SHA-256 Hash: {{ sha256_hash }}</p>
-    {% else %}
-    <p>No input or file uploaded.</p>
-    {% endif %}
+    <div class="container">
+        <!-- Brandefense logo added here -->
+        <img class="logo" src="/static/brandefense_logo.png" alt="Brandefense Logo">
+        <h1>IoC Enrichment Service by Brandefense - Result Page</h1>
 
+        {% if input_type and input_text %}
+        <p>You entered {{ input_type }}: {{ input_text }}</p>
+        {% elif sha256_hash %}
+        <p>File uploaded successfully!</p>
+        <p>SHA-256 Hash: {{ sha256_hash }}</p>
+        {% else %}
+        <p>No input or file uploaded.</p>
+        {% endif %}
+
+        <!-- Card-like design for service data -->
+        {% for service in services %}
+        <div class="service-card" id="{{ service }}-data">
+            {% if result %}
+            <h2>{{ service }} Data</h2>
+            <p>{{ result[service] }}</p>
+            {% else %}
+            <p>No data available for {{ service }}.</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="buttons-right">
+        <!-- Stylish buttons for each service on the right -->
+        {% for service in services %}
+        <button class="service-button" onclick="showServiceData('{{ service }}')">
+            <i class="service-icon fas fa-cog"></i> {{ service }}
+        </button>
+        {% endfor %}
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/js/all.min.js"></script>
+    <script>
+        function showServiceData(serviceName) {
+            // Hide all service data sections
+            const serviceDataSections = document.querySelectorAll(".service-card");
+            serviceDataSections.forEach(section => section.style.display = "none");
+
+            // Show the selected service data section
+            const selectedServiceData = document.getElementById(`${serviceName}-data`);
+            selectedServiceData.style.display = "block";
+        }
+    </script>
 </body>
 </html>

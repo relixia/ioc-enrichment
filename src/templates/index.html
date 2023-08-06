@@ -58,14 +58,24 @@
     <div class="container">
         <img class="logo" src="/static/brandefense_logo.png" alt="Brandefense Logo">
         <h1>IoC Enrichment Service by Brandefense</h1>
-        <form class="input-form" method="post" action="/search" enctype="multipart/form-data">
+        <form class="input-form" method="post" action="/search" enctype="multipart/form-data" onsubmit="submitForm(event)">
             <p>Upload a file or enter a URL, an IP address, a domain, or a file hash:</p>
             <input type="text" id="input_text" name="input_text" onchange="toggleRequired()">
-            <button type="submit" class="submit-button">Submit</button>
+            <button type="submit" id="submit-button" class="submit-button">Submit</button>
             <input type="file" id="input_file" name="input_file" onchange="toggleRequired()" required>
         </form>
     </div>
     <script>
+        function submitForm(event) {
+            event.preventDefault(); // Prevent the default form submission behavior
+
+            // Add a 2-second delay before submitting the form
+            setTimeout(function () {
+                document.getElementById("submit-button").disabled = true; // Disable the button to prevent multiple submissions
+                event.target.submit(); // Submit the form
+            }, 2000); // 2 seconds delay (2000 milliseconds)
+        }
+
         function toggleRequired() {
             const inputText = document.getElementById('input_text');
             const inputFile = document.getElementById('input_file');
@@ -78,7 +88,6 @@
                 inputFile.setAttribute('required', 'required');
             }
         }
-
     </script>
 </body>
 </html>
