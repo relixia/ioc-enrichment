@@ -37,3 +37,4 @@ class IOC(Base):
     opswat_file_reputation = Column(String, default="No data from this service")
     kaspersky = Column(String, default="No data from this service")
     hybrid_analysis = Column(String, default="No data from this service")
+    urlscanio = Column(String, default="No data from this service")

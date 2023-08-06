@@ -16,6 +16,7 @@ GREYNOISE_API = os.getenv("GREYNOISE_API")
 OPSWAT_API = os.getenv("OPSWAT_API")
 KASPERSKY_API = os.getenv("KASPERSKY_API")
 HYBRIDANA_API = os.getenv("HYBRIDANA_API")
+URLSCANIO_API = os.getenv("URLSCANIO_API")
 
 
 #AlienVault OTX: Ağ trafiğini izleyen ve zararlı davranışları algılayan açık tehdit istihbaratı platformu.
@@ -25,6 +26,7 @@ HYBRIDANA_API = os.getenv("HYBRIDANA_API")
 # Kendi phishing servisim --> USOM, PhishTank, PhishStats, OpenPhish
 # Google reklamlar: https://adstransparency.google.com/?region=anywhere
 # URLhaus: Zararlı URL'leri içeren bir veritabanı.
+# CertStream: Suspicious domains observed
 # Shodan: İnternet üzerindeki cihazlar için açık port ve servis bilgisi sağlayan bir hizmet.
 @app.task
 def virustotal_url(user_url):
@@ -115,6 +117,28 @@ def kaspersky_url(user_url):
 
         if url_row:
             url_row.kaspersky = kaspersky_url_info_json
+            session.commit()
+        session.close()
+
+@app.task
+def urlscanio(user_url):
+    headers = {
+        'API-Key': URLSCANIO_API,
+        'Content-Type': 'application/json'
+    }
+    data = {
+        "url": user_url, 
+        "visibility": "public"
+    }
+    response = requests.post('https://urlscan.io/api/v1/scan/', headers=headers, data=json.dumps(data))
+    if response.status_code == 200:
+        scan_data = response.json()
+
+        session = Session()
+        url_row = session.query(IOC).filter_by(ioc=user_url).first()
+
+        if url_row:
+            url_row.urlscanio = json.dumps(scan_data)
             session.commit()
         session.close()
 
