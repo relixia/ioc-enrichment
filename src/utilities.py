@@ -9,7 +9,7 @@ Session = sessionmaker(bind=engine)
 
 def check_input_type(input_text):
     # Check if it's a URL or domain
-    if re.match(r'^((?:https?://)?(?:www\.)?[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}|localhost)(?:/|$)', input_text):
+    if re.match(r'^(?:(?:https?://)?(?:www\.)?[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}|localhost)(?:/|$)|^(?:https?://)?\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(?::\d+)?(?:/|$)', input_text):
         return "URL" if input_text.startswith(("http://", "https://")) else "Domain"
     # Check if it's an IP address
     elif re.match(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$', input_text):
@@ -19,7 +19,7 @@ def check_input_type(input_text):
         return "File Hash"
     else:
         return "Invalid Input"
-
+        
 def calculate_file_hash(file_content):
     sha256_hash = hashlib.sha256()
     sha256_hash.update(file_content)

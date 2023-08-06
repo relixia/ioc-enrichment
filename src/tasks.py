@@ -21,6 +21,7 @@ CRIMINALIP_API = os.getenv("CRIMINALIP_API")
 CLOUDFLARE_API = os.getenv("CLOUDFLARE_API")
 CLOUDFLARE_EMAIL = os.getenv("CLOUDFLARE_EMAIL")
 # iplocation is also used
+# urlhaus is also used
 
 
 
@@ -30,7 +31,6 @@ CLOUDFLARE_EMAIL = os.getenv("CLOUDFLARE_EMAIL")
 #----------------------------------------------------FOR URL IOCS-------------------------------------------------------------
 # Kendi phishing servisim --> USOM, PhishTank, PhishStats, OpenPhish
 # Google reklamlar: https://adstransparency.google.com/?region=anywhere
-# URLhaus: Zararlı URL'leri içeren bir veritabanı.
 # CertStream: Suspicious domains observed
 # Shodan: İnternet üzerindeki cihazlar için açık port ve servis bilgisi sağlayan bir hizmet.
 @app.task
@@ -138,7 +138,6 @@ def urlscanio(user_url):
     response = requests.post('https://urlscan.io/api/v1/scan/', headers=headers, data=json.dumps(data))
     if response.status_code == 200:
         scan_data = response.json()
-
         session = Session()
         url_row = session.query(IOC).filter_by(ioc=user_url).first()
 
@@ -147,6 +146,24 @@ def urlscanio(user_url):
             session.commit()
         session.close()
 
+@app.task
+def urlhaus(user_url):
+    url = f"https://urlhaus-api.abuse.ch/v1/url/"
+    data = {
+        "url": user_url
+    }
+    response = requests.post(url, data=data)
+    print(response)
+    
+    if response.status_code == 200:
+        scan_data = response.json()
+        session = Session()
+        url_row = session.query(IOC).filter_by(ioc=user_url).first()
+        if url_row:
+            url_row.urlhaus = json.dumps(scan_data)
+            session.commit()
+        session.close()
+    
 #----------------------------------------------------FOR DOMAIN IOCS-------------------------------------------------------------
 @app.task
 def virustotal_domain(user_domain):
