@@ -17,6 +17,9 @@ def check_input_type(input_text):
     # Check if it's a file hash (MD5, SHA-1, or SHA-256)
     elif re.match(r'^[a-fA-F0-9]{32}$', input_text) or re.match(r'^[a-fA-F0-9]{40}$', input_text) or re.match(r'^[a-fA-F0-9]{64}$', input_text):
         return "File Hash"
+    # Check if it's an email address
+    elif re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', input_text):
+        return "Email Address"
     else:
         return "Invalid Input"
         

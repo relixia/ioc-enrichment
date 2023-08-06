@@ -781,3 +781,17 @@ def cloudflare_email(input_text):
             url_row.cloudflare_email = cloudflare_info_json
             session.commit()
         session.close()
+
+@app.task
+def ipqualityscore_email(user_email):
+    url = f"https://www.ipqualityscore.com/api/json/email/{IPQUALITYSCORE_API}/{user_email}"
+    response = requests.post(url)
+    if response.status_code == 200:
+        scan_data = response.json()
+        session = Session()
+        url_row = session.query(IOC).filter_by(ioc=user_email).first()
+        if url_row:
+            url_row.ipqualityscore = json.dumps(scan_data)
+            session.commit()
+        session.close()
+
