@@ -22,6 +22,7 @@ CLOUDFLARE_EMAIL = os.getenv("CLOUDFLARE_EMAIL")
 SHODAN_API = os.getenv("SHODAN_API")
 IPQUALITYSCORE_API = os.getenv("IPQUALITYSCORE_API")
 ABSTRACT_API = os.getenv("ABSTRACT_API")
+HUNTERIO_API = os.getenv("HUNTERIO_API")
 # iplocation is also used
 # urlhaus is also used
 # phishtank is also used
@@ -549,7 +550,6 @@ def shodan(user_ip):
 
 
 #----------------------------------------------------FOR FILES IOCS-------------------------------------------------------------
-# URLhaus: Zararlı URL'leri içeren bir veritabanı.
 @app.task
 def virustotal_file(user_hash):
     url = f"https://www.virustotal.com/api/v3/files/{user_hash}"
@@ -806,5 +806,18 @@ def abstract_email(user_email):
         url_row = session.query(IOC).filter_by(ioc=user_email).first()
         if url_row:
             url_row.abstract_email = json.dumps(scan_data)
+            session.commit()
+        session.close()
+
+@app.task
+def hunterio(user_email):
+    url = f"https://api.hunter.io/v2/email-verifier?email={user_email}&api_key={HUNTERIO_API}"
+    response = requests.get(url)
+    if response.status_code == 200:
+        scan_data = response.json()
+        session = Session()
+        url_row = session.query(IOC).filter_by(ioc=user_email).first()
+        if url_row:
+            url_row.hunterio = json.dumps(scan_data)
             session.commit()
         session.close()

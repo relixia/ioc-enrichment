@@ -46,4 +46,5 @@ class IOC(Base):
     openphish = Column(String, default="No data from this service")
     shodan = Column(String, default="No data from this service")
     abstract_email = Column(String, default="No data from this service")
+    hunterio = Column(String, default="No data from this service")
     cloudflare_email = Column(String, default="No data from this service")
