@@ -70,3 +70,17 @@ def check_phishtank(url_to_check):
         
     return False
 
+def check_usom(url_to_check):
+    usom_url = "https://www.usom.gov.tr/url-list.txt"
+    response = requests.get(usom_url)
+    
+    if response.status_code != 200:
+        print("Failed to download the USOM malicious URL database.")
+        return False
+
+    usom_data = response.text.splitlines()
+    if url_to_check in usom_data:
+        return True
+        
+    return False
+

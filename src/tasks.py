@@ -1,6 +1,6 @@
 from celery_base import app
 from models import Base, Session, IOC
-from utilities import virustotal_save, check_phishtank
+from utilities import virustotal_save, check_phishtank, check_usom
 import requests
 import os
 import json
@@ -24,6 +24,7 @@ CLOUDFLARE_EMAIL = os.getenv("CLOUDFLARE_EMAIL")
 # iplocation is also used
 # urlhaus is also used
 # phishtank is also used
+# usom is also used
 
 
 
@@ -31,7 +32,7 @@ CLOUDFLARE_EMAIL = os.getenv("CLOUDFLARE_EMAIL")
 
 
 #----------------------------------------------------FOR URL IOCS-------------------------------------------------------------
-# Kendi phishing servisim --> USOM, PhishTank, PhishStats, OpenPhish
+# Kendi phishing servisim --> PhishStats, OpenPhish
 # Google reklamlar: https://adstransparency.google.com/?region=anywhere
 # Shodan: İnternet üzerindeki cihazlar için açık port ve servis bilgisi sağlayan bir hizmet.
 @app.task
@@ -271,6 +272,23 @@ def criminalip_domain(user_domain):
             url_row.criminalip = criminalip_info_json
             session.commit()
         session.close()
+
+@app.task
+def usom(user_url):
+    session = Session()
+    url_row = session.query(IOC).filter_by(ioc=user_url).first()
+
+    if check_usom(user_url):
+        if url_row:
+            url_row.usom = "The Domain provided is in the USOM malicious domain database. BE CAREFUL!"
+            session.commit()
+    else:
+        if url_row:
+            url_row.usom = "The Domain provided is NOT in the USOM malicious domain database."
+            session.commit()
+
+    session.close()
+
 
 #----------------------------------------------------FOR IP ADDRESS IOCS-------------------------------------------------------------
 @app.task
