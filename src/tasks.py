@@ -1,10 +1,7 @@
 from celery_base import app
 from models import Base, Session, IOC
 from utilities import virustotal_save, check_phishtank, check_usom, check_openphish
-import requests
-import os
-import json
-import csv
+import requests, os, json, csv
 from dotenv import load_dotenv
 
 envs_path = os.path.join(os.path.dirname(__file__), "../envs/.env")
@@ -21,20 +18,14 @@ URLSCANIO_API = os.getenv("URLSCANIO_API")
 CRIMINALIP_API = os.getenv("CRIMINALIP_API")
 CLOUDFLARE_API = os.getenv("CLOUDFLARE_API")
 CLOUDFLARE_EMAIL = os.getenv("CLOUDFLARE_EMAIL")
+SHODAN_API = os.getenv("SHODAN_API")
 # iplocation is also used
 # urlhaus is also used
 # phishtank is also used
 # usom is also used
 # openphish is also used
 
-
-
-#AlienVault OTX: Ağ trafiğini izleyen ve zararlı davranışları algılayan açık tehdit istihbaratı platformu.
-
-
 #----------------------------------------------------FOR URL IOCS-------------------------------------------------------------
-# Google reklamlar: https://adstransparency.google.com/?region=anywhere
-# Shodan: İnternet üzerindeki cihazlar için açık port ve servis bilgisi sağlayan bir hizmet.
 @app.task
 def virustotal_url(user_url):
     # VIRUSTOTAL POST API TO GET THE SCAN URL ID
@@ -526,6 +517,20 @@ def iplocation(user_ip):
 
         if url_row:
             url_row.iplocation = iplocation_info_json
+            session.commit()
+        session.close()
+
+@app.task
+def shodan(user_ip):
+    url = f"https://api.shodan.io/shodan/host/{user_ip}?key={SHODAN_API}"
+    response = requests.request("GET", url)
+    if response.status_code == 200:
+        data = response.json()
+        shodan_info_json = json.dumps(data)
+        session = Session()
+        url_row = session.query(IOC).filter_by(ioc=user_ip).first()
+        if url_row:
+            url_row.shodan = shodan_info_json
             session.commit()
         session.close()
 

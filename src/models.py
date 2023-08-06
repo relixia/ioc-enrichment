@@ -6,11 +6,9 @@ from dotenv import load_dotenv
 
 Base = declarative_base()
 
-# Load environment variables from the .env file
 envs_path = os.path.join(os.path.dirname(__file__), "../envs/.env")
 load_dotenv(dotenv_path=envs_path)
 
-# Access the environment variables
 DATABASE_HOST = os.getenv("POSTGRES_USER")
 DATABASE_PASSWORD = os.getenv("POSTGRES_PASSWORD") 
 DATABASE_DB = os.getenv("POSTGRES_DB")
@@ -45,4 +43,5 @@ class IOC(Base):
     phishtank = Column(String, default="No data from this service")
     usom = Column(String, default="No data from this service")
     openphish = Column(String, default="No data from this service")
+    shodan = Column(String, default="No data from this service")
     cloudflare_email = Column(String, default="No data from this service")
