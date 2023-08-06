@@ -1,9 +1,10 @@
 from celery_base import app
 from models import Base, Session, IOC
-from utilities import virustotal_save
+from utilities import virustotal_save, check_phishtank
 import requests
 import os
 import json
+import csv
 from dotenv import load_dotenv
 
 envs_path = os.path.join(os.path.dirname(__file__), "../envs/.env")
@@ -22,6 +23,7 @@ CLOUDFLARE_API = os.getenv("CLOUDFLARE_API")
 CLOUDFLARE_EMAIL = os.getenv("CLOUDFLARE_EMAIL")
 # iplocation is also used
 # urlhaus is also used
+# phishtank is also used
 
 
 
@@ -31,7 +33,6 @@ CLOUDFLARE_EMAIL = os.getenv("CLOUDFLARE_EMAIL")
 #----------------------------------------------------FOR URL IOCS-------------------------------------------------------------
 # Kendi phishing servisim --> USOM, PhishTank, PhishStats, OpenPhish
 # Google reklamlar: https://adstransparency.google.com/?region=anywhere
-# CertStream: Suspicious domains observed
 # Shodan: İnternet üzerindeki cihazlar için açık port ve servis bilgisi sağlayan bir hizmet.
 @app.task
 def virustotal_url(user_url):
@@ -164,6 +165,23 @@ def urlhaus(user_url):
             session.commit()
         session.close()
     
+@app.task
+def phishtank(user_url):
+    session = Session()
+    url_row = session.query(IOC).filter_by(ioc=user_url).first()
+
+    if check_phishtank(user_url):
+        if url_row:
+            url_row.phishtank = "The url provided is in the PhishTank database and it is SUSPICIOUS / MALICIOUS. Be careful!"
+            session.commit()
+    else:
+        if url_row:
+            url_row.phishtank = "The url provided is NOT in the PhishTank database."
+            session.commit()
+
+    session.close()
+    
+
 #----------------------------------------------------FOR DOMAIN IOCS-------------------------------------------------------------
 @app.task
 def virustotal_domain(user_domain):

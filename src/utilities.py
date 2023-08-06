@@ -4,6 +4,9 @@ from models import IOC, Session, engine
 from sqlalchemy.orm import sessionmaker
 import uuid
 import json
+import csv
+import gzip
+import requests
 
 Session = sessionmaker(bind=engine)
 
@@ -48,3 +51,22 @@ def virustotal_save(response, ioc_name):
         url_row.virustotal = virustotal_json
         session.commit()
     session.close()
+
+def check_phishtank(url_to_check):
+    phishtank_url = "http://data.phishtank.com/data/online-valid.csv.gz"
+    response = requests.get(phishtank_url)
+    
+    if response.status_code != 200:
+        print("Failed to download the PhishTank database.")
+    else:
+        # Decompress the gzip content
+        csv_content = gzip.decompress(response.content).decode("utf-8")
+        csv_reader = csv.DictReader(csv_content.splitlines())
+        phishtank_data = list(csv_reader)
+
+        for entry in phishtank_data:
+            if "url" in entry and url_to_check in entry["url"]:
+                return True
+        
+    return False
+
