@@ -15,6 +15,7 @@ ABUSEIPDB_API = os.getenv("ABUSEIPDB_API")
 GREYNOISE_API = os.getenv("GREYNOISE_API")
 OPSWAT_API = os.getenv("OPSWAT_API")
 KASPERSKY_API = os.getenv("KASPERSKY_API")
+HYBRIDANA_API = os.getenv("HYBRIDANA_API")
 
 
 #AlienVault OTX: Ağ trafiğini izleyen ve zararlı davranışları algılayan açık tehdit istihbaratı platformu.
@@ -412,6 +413,55 @@ def kaspersky_file(user_hash):
 
         if url_row:
             url_row.kaspersky = kaspersky_info_json
+            session.commit()
+        session.close()
+
+@app.task
+def hybridana_file(user_hash):
+    url = f"https://www.hybrid-analysis.com/api/v2/overview/{user_hash}"
+    headers = {
+        "api-key": HYBRIDANA_API,
+        "accept": "application/json",
+        "user-agent": "Falcon Sandbox"
+    }
+    response = requests.request("GET", url, headers=headers)
+
+    if response.status_code == 200:
+        data = response.json()
+
+        file_info = {
+            "md5": data.get("md5"),
+            "sha1": data.get("sha1"),
+            "sha256": data.get("sha256"),
+            "last_file_name": data.get("last_file_name"),
+            "other_file_name": data.get("other_file_name"),
+            "threat_score": data.get("threat_score"),
+            "verdict": data.get("verdict"),
+            "url_analysis": data.get("url_analysis"),
+            "size": data.get("size"),
+            "type": data.get("type"),
+            "type_short": data.get("type_short"),
+            "analysis_start_time": data.get("analysis_start_time"),
+            "last_multi_scan": data.get("last_multi_scan"),
+            "tags": data.get("tags"),
+            "architecture": data.get("architecture"),
+            "vx_family": data.get("vx_family"),
+            "multiscan_result": data.get("multiscan_result"),
+            "scanners": data.get("scanners"),
+            "scanners_v2": data.get("scanners_v2"),
+            "reports": data.get("reports"),
+            "whitelisted": data.get("whitelisted"),
+            "children_in_queue": data.get("children_in_queue"),
+            "children_in_progress": data.get("children_in_progress"),
+        }
+
+        file_info_json = json.dumps(file_info)
+
+        session = Session()
+        hash_row = session.query(IOC).filter_by(ioc=user_hash).first()
+
+        if hash_row:
+            hash_row.hybrid_analysis = file_info_json
             session.commit()
         session.close()
 
