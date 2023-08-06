@@ -17,6 +17,7 @@ OPSWAT_API = os.getenv("OPSWAT_API")
 KASPERSKY_API = os.getenv("KASPERSKY_API")
 HYBRIDANA_API = os.getenv("HYBRIDANA_API")
 URLSCANIO_API = os.getenv("URLSCANIO_API")
+CRIMINALIP_API = os.getenv("CRIMINALIP_API")
 
 
 #AlienVault OTX: Ağ trafiğini izleyen ve zararlı davranışları algılayan açık tehdit istihbaratı platformu.
@@ -215,6 +216,23 @@ def kaspersky_domain(user_domain):
             session.commit()
         session.close()    
 
+@app.task
+def criminalip_domain(user_domain):
+    url = "https://api.criminalip.io/v1/domain/reports?query=example.com&offset=0"
+    payload={}
+    headers = { "x-api-key": CRIMINALIP_API }
+    response = requests.request("GET", url, headers=headers, data=payload)
+    if response.status_code == 200:
+        data = response.json()
+        criminalip_info_json = json.dumps(data)
+        session = Session()
+        url_row = session.query(IOC).filter_by(ioc=user_domain).first()
+
+        if url_row:
+            url_row.criminalip = criminalip_info_json
+            session.commit()
+        session.close()
+
 #----------------------------------------------------FOR IP ADDRESS IOCS-------------------------------------------------------------
 # https://api.iplocation.net
 @app.task
@@ -378,6 +396,27 @@ def kaspersky_ip(user_ip):
 
         if url_row:
             url_row.kaspersky = kaspersky_ip_info_json
+            session.commit()
+        session.close()
+
+@app.task
+def criminalip_ip(user_ip):
+    url = f"https://api.criminalip.io/v1/ip/data?ip={user_ip}&full=true"
+    payload={}
+    headers = {"x-api-key": CRIMINALIP_API}
+
+    response = requests.request("GET", url, headers=headers, data=payload)
+    print(response)
+    if response.status_code == 200:
+        data = response.json()
+        criminalip_info_json = json.dumps(data)
+        print(data)
+        print(criminalip_info_json)
+        session = Session()
+        url_row = session.query(IOC).filter_by(ioc=user_ip).first()
+
+        if url_row:
+            url_row.criminalip = criminalip_info_json
             session.commit()
         session.close()
 

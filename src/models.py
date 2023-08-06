@@ -38,3 +38,4 @@ class IOC(Base):
     kaspersky = Column(String, default="No data from this service")
     hybrid_analysis = Column(String, default="No data from this service")
     urlscanio = Column(String, default="No data from this service")
+    criminalip = Column(String, default="No data from this service")
