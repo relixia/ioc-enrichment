@@ -18,6 +18,8 @@ KASPERSKY_API = os.getenv("KASPERSKY_API")
 HYBRIDANA_API = os.getenv("HYBRIDANA_API")
 URLSCANIO_API = os.getenv("URLSCANIO_API")
 CRIMINALIP_API = os.getenv("CRIMINALIP_API")
+CLOUDFLARE_API = os.getenv("CLOUDFLARE_API")
+CLOUDFLARE_EMAIL = os.getenv("CLOUDFLARE_EMAIL")
 
 
 #AlienVault OTX: Ağ trafiğini izleyen ve zararlı davranışları algılayan açık tehdit istihbaratı platformu.
@@ -406,12 +408,9 @@ def criminalip_ip(user_ip):
     headers = {"x-api-key": CRIMINALIP_API}
 
     response = requests.request("GET", url, headers=headers, data=payload)
-    print(response)
     if response.status_code == 200:
         data = response.json()
         criminalip_info_json = json.dumps(data)
-        print(data)
-        print(criminalip_info_json)
         session = Session()
         url_row = session.query(IOC).filter_by(ioc=user_ip).first()
 
@@ -419,6 +418,33 @@ def criminalip_ip(user_ip):
             url_row.criminalip = criminalip_info_json
             session.commit()
         session.close()
+
+@app.task
+def cloudflare_ip(user_ip):
+    url = "https://api.cloudflare.com/client/v4/radar/entities/asns/ip"
+
+    headers = {
+        "Content-Type": "application/json",
+        "X-Auth-Email": CLOUDFLARE_EMAIL,
+        "X-Auth-Key": CLOUDFLARE_API
+    }
+    params = {
+        "format": "json",
+        "ip": user_ip
+    }
+    response = requests.request("GET", url, headers=headers)
+    print(response)
+    if response.status_code == 200:
+        data = response.json()
+        cloudflare_info_json = json.dumps(data)
+        session = Session()
+        url_row = session.query(IOC).filter_by(ioc=user_ip).first()
+
+        if url_row:
+            url_row.cloudflare = cloudflare_info_json
+            session.commit()
+        session.close()
+
 
 #----------------------------------------------------FOR FILES IOCS-------------------------------------------------------------
 # URLhaus: Zararlı URL'leri içeren bir veritabanı.
@@ -626,4 +652,31 @@ def opswat_file_reputation(user_hash):
             session.add(url_row)
             session.commit()
 
+        session.close()
+
+#----------------------------------------------------FOR EMAIL-------------------------------------------------------------
+@app.task
+def cloudflare_email(input_text):
+    url = "https://api.cloudflare.com/client/v4/radar/email/security/summary/malicious"
+
+    headers = {
+        "Content-Type": "application/json",
+        "X-Auth-Email": CLOUDFLARE_EMAIL,
+        "X-Auth-Key": CLOUDFLARE_API
+    }
+    params = {
+        "format": "json",
+        "dateRange": "7d"
+    }
+
+    response = requests.get(url, headers=headers, params=params)
+    if response.status_code == 200:
+        data = response.json()
+        cloudflare_info_json = json.dumps(data)
+        session = Session()
+        url_row = session.query(IOC).filter_by(ioc=input_text).first()
+
+        if url_row:
+            url_row.cloudflare_email = cloudflare_info_json
+            session.commit()
         session.close()

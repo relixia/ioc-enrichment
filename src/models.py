@@ -39,3 +39,5 @@ class IOC(Base):
     hybrid_analysis = Column(String, default="No data from this service")
     urlscanio = Column(String, default="No data from this service")
     criminalip = Column(String, default="No data from this service")
+    cloudflare = Column(String, default="No data from this service")
+    cloudflare_email = Column(String, default="No data from this service")

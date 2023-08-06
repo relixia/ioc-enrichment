@@ -3,7 +3,7 @@ from fastapi import FastAPI, Request, Form, File, UploadFile
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from celery_base import app
-from tasks import virustotal_url, virustotal_file, virustotal_ip, virustotal_domain, ipinfo, abuseipdb, greynoise, opswat, opswat_file_reputation, kaspersky_file, kaspersky_ip, kaspersky_domain, kaspersky_url, hybridana_file, urlscanio, criminalip_ip, criminalip_domain
+from tasks import virustotal_url, virustotal_file, virustotal_ip, virustotal_domain, ipinfo, abuseipdb, greynoise, opswat, opswat_file_reputation, kaspersky_file, kaspersky_ip, kaspersky_domain, kaspersky_url, hybridana_file, urlscanio, criminalip_ip, criminalip_domain, cloudflare_email, cloudflare_ip
 import uvicorn
 import jinja2
 from utilities import check_input_type, calculate_file_hash, ioc_save_db
@@ -39,17 +39,20 @@ async def search(
         if input_type == "URL":
             #virustotal_url.delay(input_text)
             #kaspersky_url.delay(input_text)
-            urlscanio.delay(input_text)
+            #urlscanio.delay(input_text)
+            cloudflare_email.delay(input_text)
         elif input_type == "Domain":
             #virustotal_domain.delay(input_text)
             #kaspersky_domain.delay(input_text)
             criminalip_domain.delay(input_text)
+            cloudflare_email.delay(input_text)
         elif input_type == "File Hash":
             #virustotal_file.delay(input_text)
             #opswat.delay(input_text)
             #opswat_file_reputation.delay(input_text)
             #kaspersky_file.delay(input_text)
             hybridana_file.delay(input_text)
+            cloudflare_email.delay(input_text)
         elif input_type == "IP Address":
             #virustotal_ip.delay(input_text)
             #ipinfo.delay(input_text)
@@ -57,6 +60,8 @@ async def search(
             #greynoise.delay(input_text)
             #kaspersky_ip.delay(input_text)
             criminalip_ip.delay(input_text)
+            cloudflare_ip.delay(input_text)
+            cloudflare_email.delay(input_text)
 
     elif input_file is not None:
         file_content = await input_file.read()
@@ -71,6 +76,7 @@ async def search(
         opswat_file_reputation.delay(sha256_hash)
         kaspersky_file.delay(sha256_hash)
         hybridana_file.delay(sha256_hash)
+        cloudflare_email.delay(sha256_hash)
     else:
         sha256_hash = None
 
