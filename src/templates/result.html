@@ -107,63 +107,182 @@
         .buttons-right {
             right: 20px;
         }
+        .service-button[disabled] {
+            background-color: #7d7272;
+            cursor: not-allowed;
+        }
+
+        #progress-bar {
+            background-color: #fff;
+        }
+        #loading-container {
+            background-color: rgba(255, 255, 255, 0.7); /* Adjust the alpha (0.8) to control transparency */
+            border-radius: 15px; /* Adjust the border-radius to make corners softer */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 30vh; /* Adjust the height as needed */
+            width: 50%; /* Adjust the width as needed */
+        }
     </style>
 </head>
 <body>
-    <div class="buttons-left">
-        <!-- Stylish buttons for each service on the left -->
-        {% for service in services %}
-        <button class="service-button" onclick="showServiceData('{{ service }}')">
-            <i class="service-icon fas fa-cog"></i> {{ service }}
-        </button>
-        {% endfor %}
-    </div>
+    <div id="loading-container">
 
-    <div class="container">
-        <!-- Brandefense logo added here -->
-        <img class="logo" src="/static/brandefense_logo.png" alt="Brandefense Logo">
-        <h1>IoC Enrichment Service by Brandefense - Result Page</h1>
-
-        {% if input_type and input_text %}
-        <p>You entered {{ input_type }}: {{ input_text }}</p>
-        {% elif sha256_hash %}
-        <p>File uploaded successfully!</p>
-        <p>SHA-256 Hash: {{ sha256_hash }}</p>
-        {% else %}
-        <p>No input or file uploaded.</p>
-        {% endif %}
-
-        <!-- Card-like design for service data -->
-        {% for service in services %}
-        <div class="service-card" id="{{ service }}-data">
-            {% if result %}
-            <h2>{{ service }} Data</h2>
-            <div id="{{ service }}-result">
-                {% if result[service] is mapping %}
-                    <pre>{{ result[service] | json }}</pre>
-                {% else %}
-                    <p>{{ result[service] }}</p>
-                {% endif %}
-            </div>
-            {% else %}
-            <p>No data available for {{ service }}.</p>
-            {% endif %}
+        <!-- Loading message or spinner -->
+        <div id="loading-message" style="display: flex; justify-content: center; align-items: center; height: 100vh;">
+            <i class="fas fa-spinner fa-spin" style="font-size: 40px;"></i>
+            <p style="font-size: 40px; margin-left: 10px;">Please wait, the page is loading...</p>
         </div>
-        {% endfor %}
 
-    </div>
+        <div id="loading-progress" style="background-color: #fff; display: none; width: 120%; background-color: #f2f2f2;">
+            <div id="progress-bar" style="height: 5px; background-color: #007bff;"></div>
+        </div>
+        
 
-    <div class="buttons-right">
-        <!-- Stylish buttons for each service on the right -->
-        {% for service in services %}
-        <button class="service-button" onclick="showServiceData('{{ service }}')">
-            <i class="service-icon fas fa-cog"></i> {{ service }}
-        </button>
-        {% endfor %}
+        <div id="content-wrapper" style="display: none;">
+            <div class="buttons-left">
+                <!-- Stylish buttons for each service on the left -->
+                {% for service in services %}
+                <button class="service-button" onclick="showServiceData('{{ service }}')">
+                    <i class="service-icon fas fa-cog"></i> {{ service }}
+                </button>
+                {% endfor %}
+            </div>
+
+            <div class="container">
+                <!-- Brandefense logo added here -->
+                <img class="logo" src="/static/brandefense_logo.png" alt="Brandefense Logo">
+                <h1>IoC Enrichment Service by Brandefense - Result Page</h1>
+
+                {% if input_type and input_text %}
+                <p>You entered {{ input_type }}: {{ input_text }}</p>
+                {% elif sha256_hash %}
+                <p>File uploaded successfully!</p>
+                <p>SHA-256 Hash: {{ sha256_hash }}</p>
+                {% else %}
+                <p>No input or file uploaded.</p>
+                {% endif %}
+
+                <!-- Card-like design for service data -->
+                {% for service in services %}
+                <div class="service-card" id="{{ service }}-data">
+                    {% if result %}
+                    <h2>{{ service }} Data</h2>
+                    <div id="{{ service }}-result">
+                        {% if result[service] is mapping %}
+                            <pre>{{ result[service] | json }}</pre>
+                        {% else %}
+                            <p>{{ result[service] }}</p>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <p>No data available for {{ service }}.</p>
+                    {% endif %}
+                </div>
+                {% endfor %}
+
+            </div>
+
+            <div class="buttons-right">
+                <!-- Stylish buttons for each service on the right -->
+                {% for service in services %}
+                <button class="service-button" onclick="showServiceData('{{ service }}')">
+                    <i class="service-icon fas fa-cog"></i> {{ service }}
+                </button>
+                {% endfor %}
+            </div>
+        </div>
     </div>
+    <script>
+    function updateProgressBar(progress) {
+        const progressBar = document.getElementById("progress-bar");
+        progressBar.style.width = `${progress}%`;
+    }
+
+    // Function to show the content after the delay
+    function showContentAfterDelay() {
+        document.getElementById("loading-progress").style.display = "none";
+        document.getElementById("content-wrapper").style.display = "block";
+    }
+
+    // Call the function to show content after 10 seconds (10000 milliseconds)
+    const progressBarInterval = 100; // Adjust the interval for smoother animation
+    let progress = 0;
+    const intervalId = setInterval(() => {
+        progress += (100 / (10000 / progressBarInterval));
+        updateProgressBar(progress);
+        if (progress >= 100) {
+            clearInterval(intervalId);
+            showContentAfterDelay();
+        }
+    }, progressBarInterval);    
+    </script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/js/all.min.js"></script>
     <script>
+            // Function to disable irrelevant buttons
+            function disableIrrelevantButtons() {
+                // Check the input_type (URL, Domain, File Hash, etc.)
+                const inputType = "{{ input_type }}";
+                const urlServiceNames = ["virustotal", "kaspersky", "urlscanio", "cloudflare_email", "urlhaus", "phishtank", "openphish", "ipqualityscore"];
+                const domainServiceNames = ["virustotal", "kaspersky", "criminalip", "cloudflare_email", "usom", "ipqualityscore"]
+                const fileServiceNames = ["virustotal", "kaspersky", "opswat", "opswat_file_reputation", "cloudflare_email", "hybrid_analysis"]
+                const ipaddServiceNames = ["virustotal", "ipinfo", "abuseipdb", "greynoise", "kaspersky", "criminalip", "cloudflare", "cloudflare_email", "iplocation", "shodan"]
+                const emailServiceNames = ["ipqualityscore", "abstract_email", "hunterio", "cloudflare_email"]
+
+                // If the input_type is "URL", disable all other service buttons
+                if (inputType === "URL") {
+                    const serviceButtons = document.querySelectorAll(".service-button");
+                    serviceButtons.forEach(button => {
+                        const buttonText = button.innerText.trim().toLowerCase();
+                        if (!urlServiceNames.includes(buttonText)) {
+                            button.disabled = true;
+                        }
+                    });
+                }
+                else if (inputType == "Domain"){
+                    const serviceButtons = document.querySelectorAll(".service-button");
+                    serviceButtons.forEach(button => {
+                        const buttonText = button.innerText.trim().toLowerCase();
+                        if (!domainServiceNames.includes(buttonText)) {
+                            button.disabled = true;
+                        }
+                    });
+                }
+                else if (inputType == "IP Address"){
+                    const serviceButtons = document.querySelectorAll(".service-button");
+                    serviceButtons.forEach(button => {
+                        const buttonText = button.innerText.trim().toLowerCase();
+                        if (!ipaddServiceNames.includes(buttonText)) {
+                            button.disabled = true;
+                        }
+                    });
+                }
+                else if (inputType == "File Hash" || inputType == "File/File Hash"){
+                    const serviceButtons = document.querySelectorAll(".service-button");
+                    serviceButtons.forEach(button => {
+                        const buttonText = button.innerText.trim().toLowerCase();
+                        if (!fileServiceNames.includes(buttonText)) {
+                            button.disabled = true;
+                        }
+                    });
+                }
+                else if (inputType == "Email Address"){
+                    const serviceButtons = document.querySelectorAll(".service-button");
+                    serviceButtons.forEach(button => {
+                        const buttonText = button.innerText.trim().toLowerCase();
+                        if (!emailServiceNames.includes(buttonText)) {
+                            button.disabled = true;
+                        }
+                    });
+                }
+            }
+
+            // Call the function to disable irrelevant buttons on page load
+            disableIrrelevantButtons();
+
         function showServiceData(serviceName) {
             // Hide all service data sections
             const serviceDataSections = document.querySelectorAll(".service-card");
@@ -174,18 +293,7 @@
             selectedServiceData.style.display = "block";
         }
     </script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/js/all.min.js"></script>
     <script>
-        function showServiceData(serviceName) {
-            // Hide all service data sections
-            const serviceDataSections = document.querySelectorAll(".service-card");
-            serviceDataSections.forEach(section => section.style.display = "none");
-
-            // Show the selected service data section
-            const selectedServiceData = document.getElementById(`${serviceName}-data`);
-            selectedServiceData.style.display = "block";
-        }
-
         // Format JSON data for each service and update the DOM
         const serviceDataSections = document.querySelectorAll(".service-card");
         serviceDataSections.forEach(section => {

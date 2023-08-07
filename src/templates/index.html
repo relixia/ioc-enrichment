@@ -64,7 +64,7 @@
         <img class="logo" src="/static/brandefense_logo.png" alt="Brandefense Logo">
         <h1>IoC Enrichment Service by Brandefense</h1>
         <form class="input-form" method="post" action="/search" enctype="multipart/form-data" onsubmit="submitForm(event)">
-            <p>Upload a file or enter a URL, an IP address, a domain, or a file hash:</p>
+            <p>Upload a file or enter a URL, an email address, an IP address, a domain, or a file hash:</p>
             <input type="text" id="input_text" name="input_text" onchange="toggleRequired()">
             <button type="submit" id="submit-button" class="submit-button">Submit</button>
             <input type="file" id="input_file" name="input_file" onchange="toggleRequired()" required>
@@ -72,15 +72,15 @@
     </div>
     <script>
         function submitForm(event) {
-            document.getElementById("submit-button").disabled = true; // Disable the button to prevent multiple submissions
+            const submitButton = document.getElementById("submit-button");
+            submitButton.disabled = true; // Disable the button to prevent multiple submissions
             event.preventDefault(); // Prevent the default form submission behavior
-            // Disable the submit button to prevent multiple submissions
 
-            // Add a 2-second delay before submitting the form
+            // Add a 1-second delay before submitting the form
             setTimeout(function () {
                 event.target.submit(); // Submit the form
-                document.getElementById("submit-button").disabled = false; // Enable the button
-            }, 7000); // 7 seconds delay (7000 milliseconds)
+                submitButton.disabled = false; // Enable the button
+            }, 1000); // 1 seconds delay (1000 milliseconds)
         }
         
 
