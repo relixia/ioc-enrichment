@@ -52,6 +52,11 @@
             border-radius: 4px;
             cursor: pointer;
         }
+        .submit-button[disabled] {
+        background-color: #7d7272; /* Use gray background color */
+        cursor: not-allowed; /* Change cursor to indicate that the button is not clickable */
+        }
+
     </style>
 </head>
 <body>
@@ -67,14 +72,17 @@
     </div>
     <script>
         function submitForm(event) {
+            document.getElementById("submit-button").disabled = true; // Disable the button to prevent multiple submissions
             event.preventDefault(); // Prevent the default form submission behavior
+            // Disable the submit button to prevent multiple submissions
 
             // Add a 2-second delay before submitting the form
             setTimeout(function () {
-                document.getElementById("submit-button").disabled = true; // Disable the button to prevent multiple submissions
                 event.target.submit(); // Submit the form
-            }, 2000); // 2 seconds delay (2000 milliseconds)
+                document.getElementById("submit-button").disabled = false; // Enable the button
+            }, 7000); // 7 seconds delay (7000 milliseconds)
         }
+        
 
         function toggleRequired() {
             const inputText = document.getElementById('input_text');

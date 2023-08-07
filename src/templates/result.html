@@ -33,7 +33,7 @@
             top: 20px; /* Adjust the top value to position the logo inside the container */
             left: 50%;
             transform: translateX(-50%);
-            width: 300px;
+            width: 400px;
             height: auto;
         }
 
@@ -51,14 +51,19 @@
         /* Stylish buttons for services */
         .service-button {
             cursor: pointer;
-            margin: 10px;
-            padding: 12px 16px;
+            margin: 7px;
+            padding: 12px 10px;
+            width: 210px;
+            height: 30px;
+            display: flex; /* Set display to flex */
+            align-items: center; /* Center content vertically */
+            justify-content: center; /* Center content horizontally */
             background-color: #2e78c8;
             color: #fff;
             border: none;
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            font-size: 13px;
+            font-size: 17px;
             transition: background-color 0.3s ease;
         }
 
@@ -80,8 +85,8 @@
 
         /* Stylish icon for service card */
         .service-icon {
-            font-size: 48px;
-            margin-bottom: 10px;
+            font-size: 10px;
+            margin-bottom: 8px;
         }
 
         /* Buttons on the left and right of the container */
@@ -92,7 +97,7 @@
             align-items: center;
             position: absolute;
             top: 50%;
-            transform: translateY(-16%);
+            transform: translateY(-42%);
         }
 
         .buttons-left {
@@ -133,12 +138,19 @@
         <div class="service-card" id="{{ service }}-data">
             {% if result %}
             <h2>{{ service }} Data</h2>
-            <p>{{ result[service] }}</p>
+            <div id="{{ service }}-result">
+                {% if result[service] is mapping %}
+                    <pre>{{ result[service] | json }}</pre>
+                {% else %}
+                    <p>{{ result[service] }}</p>
+                {% endif %}
+            </div>
             {% else %}
             <p>No data available for {{ service }}.</p>
             {% endif %}
         </div>
         {% endfor %}
+
     </div>
 
     <div class="buttons-right">
@@ -161,6 +173,33 @@
             const selectedServiceData = document.getElementById(`${serviceName}-data`);
             selectedServiceData.style.display = "block";
         }
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/js/all.min.js"></script>
+    <script>
+        function showServiceData(serviceName) {
+            // Hide all service data sections
+            const serviceDataSections = document.querySelectorAll(".service-card");
+            serviceDataSections.forEach(section => section.style.display = "none");
+
+            // Show the selected service data section
+            const selectedServiceData = document.getElementById(`${serviceName}-data`);
+            selectedServiceData.style.display = "block";
+        }
+
+        // Format JSON data for each service and update the DOM
+        const serviceDataSections = document.querySelectorAll(".service-card");
+        serviceDataSections.forEach(section => {
+            const serviceName = section.id.split("-")[0];
+            const resultDiv = section.querySelector(`#${serviceName}-result`);
+            const jsonText = resultDiv.textContent.trim();
+            try {
+                const jsonData = JSON.parse(jsonText);
+                const formattedData = JSON.stringify(jsonData, null, 2);
+                resultDiv.innerHTML = `<pre>${formattedData}</pre>`;
+            } catch (error) {
+                console.error(`Failed to parse JSON for ${serviceName}.`, error);
+            }
+        });
     </script>
 </body>
 </html>
