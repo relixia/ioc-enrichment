@@ -1,4 +1,4 @@
-<img width="1470" alt="loading process" src="https://github.com/relixia/ioc-enrichment/assets/77904399/1b74f92c-6829-4e3f-9c63-4c96e6251153"># ioc-enrichment
+# ioc-enrichment
 Indicator of Comprimise enrichment service which uses 22+ services alltogether.
 Possible ioc types to be analyzed:
   URL
