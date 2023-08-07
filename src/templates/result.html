@@ -19,7 +19,7 @@
         }
 
         .container {
-            max-width: 800px;
+            max-width: 650px;
             padding: 80px;
             background-color: rgba(255, 255, 255, 0.9);
             border-radius: 8px;
@@ -96,16 +96,17 @@
             flex-direction: column;
             align-items: center;
             position: absolute;
-            top: 50%;
-            transform: translateY(-42%);
+            /* Adjust left and right values to move the buttons to the sides */
+            left:0;
+            right: 0;
         }
 
         .buttons-left {
-            left: 20px;
+            transform: translateX(-75%);
         }
 
         .buttons-right {
-            right: 20px;
+            transform: translateX(75%);
         }
         .service-button[disabled] {
             background-color: #7d7272;
@@ -117,7 +118,7 @@
         }
         #loading-container {
             background-color: rgba(255, 255, 255, 0.7); /* Adjust the alpha (0.8) to control transparency */
-            border-radius: 15px; /* Adjust the border-radius to make corners softer */
+            border-radius: 8px; /* Adjust the border-radius to make corners softer */
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -141,9 +142,18 @@
         </div>
         
 
-        <div id="content-wrapper" style="display: none;">
+        <div id="content-wrapper" style="display: none; position: absolute; top: 0; left: 50%; transform: translateX(-50%);">
             <div class="buttons-left">
                 <!-- Stylish buttons for each service on the left -->
+                {% for service in services %}
+                <button class="service-button" onclick="showServiceData('{{ service }}')">
+                    <i class="service-icon fas fa-cog"></i> {{ service }}
+                </button>
+                {% endfor %}
+            </div>
+
+            <div class="buttons-right">
+                <!-- Stylish buttons for each service on the right -->
                 {% for service in services %}
                 <button class="service-button" onclick="showServiceData('{{ service }}')">
                     <i class="service-icon fas fa-cog"></i> {{ service }}
@@ -185,14 +195,6 @@
 
             </div>
 
-            <div class="buttons-right">
-                <!-- Stylish buttons for each service on the right -->
-                {% for service in services %}
-                <button class="service-button" onclick="showServiceData('{{ service }}')">
-                    <i class="service-icon fas fa-cog"></i> {{ service }}
-                </button>
-                {% endfor %}
-            </div>
         </div>
     </div>
     <script>
@@ -203,7 +205,9 @@
 
     // Function to show the content after the delay
     function showContentAfterDelay() {
+        document.getElementById("loading-message").style.display = "none";
         document.getElementById("loading-progress").style.display = "none";
+        document.getElementById("loading-container").style.backgroundColor = "transparent";
         document.getElementById("content-wrapper").style.display = "block";
     }
 
@@ -226,11 +230,11 @@
             function disableIrrelevantButtons() {
                 // Check the input_type (URL, Domain, File Hash, etc.)
                 const inputType = "{{ input_type }}";
-                const urlServiceNames = ["virustotal", "kaspersky", "urlscanio", "cloudflare_email", "urlhaus", "phishtank", "openphish", "ipqualityscore"];
-                const domainServiceNames = ["virustotal", "kaspersky", "criminalip", "cloudflare_email", "usom", "ipqualityscore"]
-                const fileServiceNames = ["virustotal", "kaspersky", "opswat", "opswat_file_reputation", "cloudflare_email", "hybrid_analysis"]
-                const ipaddServiceNames = ["virustotal", "ipinfo", "abuseipdb", "greynoise", "kaspersky", "criminalip", "cloudflare", "cloudflare_email", "iplocation", "shodan"]
-                const emailServiceNames = ["ipqualityscore", "abstract_email", "hunterio", "cloudflare_email"]
+                const urlServiceNames = ["id", "virustotal", "kaspersky", "urlscanio", "cloudflare_email", "urlhaus", "phishtank", "openphish", "ipqualityscore"];
+                const domainServiceNames = ["id", "virustotal", "kaspersky", "criminalip", "cloudflare_email", "usom", "ipqualityscore"]
+                const fileServiceNames = ["id", "virustotal", "kaspersky", "opswat", "opswat_file_reputation", "cloudflare_email", "hybrid_analysis"]
+                const ipaddServiceNames = ["id", "virustotal", "ipinfo", "abuseipdb", "greynoise", "kaspersky", "criminalip", "cloudflare", "cloudflare_email", "iplocation", "shodan"]
+                const emailServiceNames = ["id", "ipqualityscore", "abstract_email", "hunterio", "cloudflare_email"]
 
                 // If the input_type is "URL", disable all other service buttons
                 if (inputType === "URL") {
