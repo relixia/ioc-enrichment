@@ -237,7 +237,7 @@
                 const emailServiceNames = ["id", "ipqualityscore", "abstract_email", "hunterio", "cloudflare_email"]
 
                 // If the input_type is "URL", disable all other service buttons
-                if (inputType === "URL") {
+                if (inputType === "InputType.URL") {
                     const serviceButtons = document.querySelectorAll(".service-button");
                     serviceButtons.forEach(button => {
                         const buttonText = button.innerText.trim().toLowerCase();
@@ -246,7 +246,7 @@
                         }
                     });
                 }
-                else if (inputType == "Domain"){
+                else if (inputType == "InputType.DOMAIN"){
                     const serviceButtons = document.querySelectorAll(".service-button");
                     serviceButtons.forEach(button => {
                         const buttonText = button.innerText.trim().toLowerCase();
@@ -255,7 +255,7 @@
                         }
                     });
                 }
-                else if (inputType == "IP Address"){
+                else if (inputType == "InputType.IP_ADDRESS"){
                     const serviceButtons = document.querySelectorAll(".service-button");
                     serviceButtons.forEach(button => {
                         const buttonText = button.innerText.trim().toLowerCase();
@@ -264,7 +264,7 @@
                         }
                     });
                 }
-                else if (inputType == "File Hash" || inputType == "File/File Hash"){
+                else if (inputType == "InputType.FILE_HASH"){
                     const serviceButtons = document.querySelectorAll(".service-button");
                     serviceButtons.forEach(button => {
                         const buttonText = button.innerText.trim().toLowerCase();
@@ -273,7 +273,7 @@
                         }
                     });
                 }
-                else if (inputType == "Email Address"){
+                else if (inputType == "InputType.EMAIL_ADDRESS"){
                     const serviceButtons = document.querySelectorAll(".service-button");
                     serviceButtons.forEach(button => {
                         const buttonText = button.innerText.trim().toLowerCase();

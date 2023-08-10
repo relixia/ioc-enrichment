@@ -8,6 +8,9 @@ from urllib.parse import quote
 envs_path = os.path.join(os.path.dirname(__file__), "../envs/.env")
 load_dotenv(dotenv_path=envs_path)
 
+#logger kullanılabilir print yerine 
+#dockerignore koyulabilir
+#configlerin tamamını config.py içine atılması lazım tek bir configle her şeye erişilmesi lazım from config import settings diyosun settings.criminalapi diyerek direk alabiliyorsun
 VIRUSTOTAL_API = os.getenv("VIRUSTOTAL_API")
 IPINFO_API = os.getenv("IPINFO_API")
 ABUSEIPDB_API = os.getenv("ABUSEIPDB_API")
@@ -42,22 +45,23 @@ def virustotal_url(user_url):
     }
     response = requests.post(url, data=payload, headers=headers)
 
-    if response.status_code == 200:
-        data = response.json()
-        url_analysis_id = data["data"]["id"].split("-")[1]
-        # VIRUSTOTAL GET API TO GET THE URL ANALYSIS REPORT BY USING THE SCAN URL ID
-        url_rep = f"https://www.virustotal.com/api/v3/urls/{url_analysis_id}"
-        headers_rep = {"accept": "application/json", "x-apikey": VIRUSTOTAL_API}
-        response_rep = requests.get(url_rep, headers=headers_rep)
+    if response.status_code != 200:
+        return 
+    data = response.json()
+    url_analysis_id = data["data"]["id"].split("-")[1]
+    # VIRUSTOTAL GET API TO GET THE URL ANALYSIS REPORT BY USING THE SCAN URL ID
+    url_rep = f"https://www.virustotal.com/api/v3/urls/{url_analysis_id}"
+    headers_rep = {"accept": "application/json", "x-apikey": VIRUSTOTAL_API}
+    response_rep = requests.get(url_rep, headers=headers_rep)
 
-        if response_rep.status_code == 200:
-            virustotal_save(response=response_rep, ioc_name=user_url)
-        return url_analysis_id
-    else:
-        return None
+    if response_rep.status_code == 200:
+        virustotal_save(response=response_rep, ioc_name=user_url)
+    return url_analysis_id
 
 @app.task
-def kaspersky_url(user_url):
+def kaspersky_url(user_url: str | None) -> str:
+    if not user_url:
+        return
     url = f"https://opentip.kaspersky.com/api/v1/search/url?request={user_url}"
     headers = { 
         "x-api-key": KASPERSKY_API
