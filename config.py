@@ -1,11 +1,12 @@
-from dynaconf import Dynaconf
 from pathlib import Path
+
+from dynaconf import Dynaconf
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-settings = Dynaconf(     
+settings = Dynaconf(
     load_dotenv=True,
-    envvar_prefix_for_dynaconf=False,     
+    envvar_prefix_for_dynaconf=False,
     dotenv_path=str(BASE_DIR.joinpath("ioc-enrichment", "envs", ".env")),
 )
 

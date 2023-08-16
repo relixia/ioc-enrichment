@@ -1,16 +1,35 @@
-from celery_base import app
-from models import Base, Session, IOC
-from utilities import virustotal_save, check_phishtank, check_usom, check_openphish
-import requests, os, json, csv
-from dotenv import load_dotenv
+import csv
+import json
+import os
 from urllib.parse import quote
+
+import requests
+from dotenv import load_dotenv
+
+from celery_base import app
+from models import IOC, Base, Session
+from utilities import (check_openphish, check_phishtank, check_usom,
+                       virustotal_save)
 
 envs_path = os.path.join(os.path.dirname(__file__), "../envs/.env")
 load_dotenv(dotenv_path=envs_path)
 
-#logger kullanılabilir print yerine 
-#dockerignore koyulabilir
-#configlerin tamamını config.py içine atılması lazım tek bir configle her şeye erişilmesi lazım from config import settings diyosun settings.criminalapi diyerek direk alabiliyorsun
+# precommit githooks --> her commit öncesi test çalışacak testlerden geçerse commit edilecek
+# pytest covarage eklentisi randomizer ekelnetisi gibi gibi eklentiler var testler için entegre edilmesi gerekir 
+# flake8 
+
+# black
+# bandit
+# isort
+# docstring yazılacak --> sphinx https://www.sphinx-doc.org/en/master/usage/quickstart.html
+# unittest yazılacak --> önce normal sonra sqlalchemy için de olabilir /// pytest mock / unittest kullan
+# pytest using Makefile and make command
+# typing https://docs.python.org/3/library/typing.html --> def greeting(name: str) -> str 
+# GPG keypair and git-secret
+# configlerin tamamını config.py içine atılması lazım tek bir configle her şeye erişilmesi lazım from config import settings diyosun settings.criminalapi diyerek direk alabiliyorsun
+# data transfer objects with pydantic --> FastAPI uses pydantic for schema definition and data validation
+# MVC model view controllers 
+
 VIRUSTOTAL_API = os.getenv("VIRUSTOTAL_API")
 IPINFO_API = os.getenv("IPINFO_API")
 ABUSEIPDB_API = os.getenv("ABUSEIPDB_API")
@@ -32,9 +51,9 @@ HUNTERIO_API = os.getenv("HUNTERIO_API")
 # usom is also used
 # openphish is also used
 
-#----------------------------------------------------FOR URL IOCS-------------------------------------------------------------
+# ----------------------------------------------------FOR URL IOCS-------------------------------------------------------------
 @app.task
-def virustotal_url(user_url):
+def virustotal_url(user_url: str) -> str:
     # VIRUSTOTAL POST API TO GET THE SCAN URL ID
     url = "https://www.virustotal.com/api/v3/urls"
     payload = {"url": user_url}
@@ -46,7 +65,7 @@ def virustotal_url(user_url):
     response = requests.post(url, data=payload, headers=headers)
 
     if response.status_code != 200:
-        return 
+        return
     data = response.json()
     url_analysis_id = data["data"]["id"].split("-")[1]
     # VIRUSTOTAL GET API TO GET THE URL ANALYSIS REPORT BY USING THE SCAN URL ID
@@ -58,14 +77,13 @@ def virustotal_url(user_url):
         virustotal_save(response=response_rep, ioc_name=user_url)
     return url_analysis_id
 
+
 @app.task
 def kaspersky_url(user_url: str | None) -> str:
     if not user_url:
         return
     url = f"https://opentip.kaspersky.com/api/v1/search/url?request={user_url}"
-    headers = { 
-        "x-api-key": KASPERSKY_API
-    }
+    headers = {"x-api-key": KASPERSKY_API}
     response = requests.request("GET", url, headers=headers)
 
     if response.status_code == 200:
@@ -81,10 +99,7 @@ def kaspersky_url(user_url: str | None) -> str:
             "files_count": url_general_info.get("FilesCount"),
             "categories": url_general_info.get("Categories"),
             "categories_with_zone": [
-                {
-                    "name": category.get("Name"),
-                    "zone": category.get("Zone")
-                }
+                {"name": category.get("Name"), "zone": category.get("Zone")}
                 for category in url_general_info.get("CategoriesWithZone", [])
             ],
             "domain_name": url_domain_whois_info.get("DomainName"),
@@ -104,16 +119,18 @@ def kaspersky_url(user_url: str | None) -> str:
                     "country_code": contact.get("CountryCode"),
                     "phone": contact.get("Phone"),
                     "fax": contact.get("Fax"),
-                    "email": contact.get("Email")
+                    "email": contact.get("Email"),
                 }
                 for contact in url_domain_whois_info.get("Contacts", [])
             ],
             "registrar": {
                 "info": url_domain_whois_info.get("Registrar", {}).get("Info"),
-                "iana_id": url_domain_whois_info.get("Registrar", {}).get("IanaId")
+                "iana_id": url_domain_whois_info.get("Registrar", {}).get("IanaId"),
             },
             "domain_status": url_domain_whois_info.get("DomainStatus"),
-            "registration_organization": url_domain_whois_info.get("RegistrationOrganization")
+            "registration_organization": url_domain_whois_info.get(
+                "RegistrationOrganization"
+            ),
         }
 
         kaspersky_url_info_json = json.dumps(kaspersky_url_info)
@@ -126,17 +143,14 @@ def kaspersky_url(user_url: str | None) -> str:
             session.commit()
         session.close()
 
+
 @app.task
-def urlscanio(user_url):
-    headers = {
-        'API-Key': URLSCANIO_API,
-        'Content-Type': 'application/json'
-    }
-    data = {
-        "url": user_url, 
-        "visibility": "public"
-    }
-    response = requests.post('https://urlscan.io/api/v1/scan/', headers=headers, data=json.dumps(data))
+def urlscanio(user_url: str) -> str:
+    headers = {"API-Key": URLSCANIO_API, "Content-Type": "application/json"}
+    data = {"url": user_url, "visibility": "public"}
+    response = requests.post(
+        "https://urlscan.io/api/v1/scan/", headers=headers, data=json.dumps(data)
+    )
     if response.status_code == 200:
         scan_data = response.json()
         session = Session()
@@ -147,13 +161,12 @@ def urlscanio(user_url):
             session.commit()
         session.close()
 
+
 @app.task
 def urlhaus(user_url):
     url = f"https://urlhaus-api.abuse.ch/v1/url/"
-    data = {
-        "url": user_url
-    }
-    response = requests.post(url, data=data)    
+    data = {"url": user_url}
+    response = requests.post(url, data=data)
     if response.status_code == 200:
         scan_data = response.json()
         session = Session()
@@ -162,7 +175,8 @@ def urlhaus(user_url):
             url_row.urlhaus = json.dumps(scan_data)
             session.commit()
         session.close()
-    
+
+
 @app.task
 def phishtank(user_url):
     session = Session()
@@ -175,9 +189,10 @@ def phishtank(user_url):
             url_row.phishtank = "The url provided is NOT in the PhishTank database."
             session.commit()
     session.close()
-    
+
+
 @app.task
-def openphish(user_url):
+def openphish(user_url: str) -> str:
     session = Session()
     url_row = session.query(IOC).filter_by(ioc=user_url).first()
     if url_row:
@@ -185,17 +200,20 @@ def openphish(user_url):
             url_row.openphish = "The url provided is in the OpenPhish malicious URL database. BE CAREFUL!"
             session.commit()
         else:
-            url_row.openphish = "The url provided is NOT in the OpenPhish malicious URL database."
+            url_row.openphish = (
+                "The url provided is NOT in the OpenPhish malicious URL database."
+            )
             session.commit()
     session.close()
 
+
 @app.task
-def ipqualityscore(user_url): #BOTH FOR URL AND DOMAIN
+def ipqualityscore(user_url: str) -> str:  # BOTH FOR URL AND DOMAIN
     user_url_in_db = user_url
     if user_url.startswith("http://"):
-        user_url = user_url[len("http://"):]
+        user_url = user_url[len("http://") :]
     elif user_url.startswith("https://"):
-        user_url = user_url[len("https://"):]
+        user_url = user_url[len("https://") :]
     encoded_url = quote(user_url)
     url = f"https://www.ipqualityscore.com/api/json/url/{IPQUALITYSCORE_API}/{encoded_url}"
     response = requests.post(url)
@@ -208,25 +226,22 @@ def ipqualityscore(user_url): #BOTH FOR URL AND DOMAIN
             session.commit()
         session.close()
 
-#----------------------------------------------------FOR DOMAIN IOCS-------------------------------------------------------------
+
+# ----------------------------------------------------FOR DOMAIN IOCS-------------------------------------------------------------
 @app.task
-def virustotal_domain(user_domain):
+def virustotal_domain(user_domain: str) -> str:
     url = f"https://www.virustotal.com/api/v3/domains/{user_domain}"
-    headers = {
-        "accept": "application/json",
-        "x-apikey": VIRUSTOTAL_API
-    }
+    headers = {"accept": "application/json", "x-apikey": VIRUSTOTAL_API}
     response = requests.get(url, headers=headers)
 
     if response.status_code == 200:
         virustotal_save(response=response, ioc_name=user_domain)
 
+
 @app.task
-def kaspersky_domain(user_domain):
+def kaspersky_domain(user_domain: str) -> str:
     url = f"https://opentip.kaspersky.com/api/v1/search/domain?request={user_domain}"
-    headers = { 
-        "x-api-key": KASPERSKY_API
-    }
+    headers = {"x-api-key": KASPERSKY_API}
     response = requests.request("GET", url, headers=headers)
 
     if response.status_code == 200:
@@ -243,10 +258,7 @@ def kaspersky_domain(user_domain):
             "ipv4_count": domain_general_info.get("Ipv4Count"),
             "categories": domain_general_info.get("Categories"),
             "categories_with_zone": [
-                {
-                    "name": category.get("Name"),
-                    "zone": category.get("Zone")
-                }
+                {"name": category.get("Name"), "zone": category.get("Zone")}
                 for category in domain_general_info.get("CategoriesWithZone", [])
             ],
             "domain_name": domain_whois_info.get("DomainName"),
@@ -259,16 +271,18 @@ def kaspersky_domain(user_domain):
                     "contact_type": contact.get("ContactType"),
                     "organization": contact.get("Organization"),
                     "state": contact.get("State"),
-                    "country_code": contact.get("CountryCode")
+                    "country_code": contact.get("CountryCode"),
                 }
                 for contact in domain_whois_info.get("Contacts", [])
             ],
             "registrar": {
                 "info": domain_whois_info.get("Registrar", {}).get("Info"),
-                "iana_id": domain_whois_info.get("Registrar", {}).get("IanaId")
+                "iana_id": domain_whois_info.get("Registrar", {}).get("IanaId"),
             },
             "domain_status": domain_whois_info.get("DomainStatus"),
-            "registration_organization": domain_whois_info.get("RegistrationOrganization")
+            "registration_organization": domain_whois_info.get(
+                "RegistrationOrganization"
+            ),
         }
 
         kaspersky_domain_info_json = json.dumps(kaspersky_domain_info)
@@ -279,13 +293,14 @@ def kaspersky_domain(user_domain):
         if url_row:
             url_row.kaspersky = kaspersky_domain_info_json
             session.commit()
-        session.close()    
+        session.close()
+
 
 @app.task
-def criminalip_domain(user_domain):
+def criminalip_domain(user_domain: str) -> str:
     url = "https://api.criminalip.io/v1/domain/reports?query=example.com&offset=0"
-    payload={}
-    headers = { "x-api-key": CRIMINALIP_API }
+    payload = {}
+    headers = {"x-api-key": CRIMINALIP_API}
     response = requests.request("GET", url, headers=headers, data=payload)
     if response.status_code == 200:
         data = response.json()
@@ -298,8 +313,9 @@ def criminalip_domain(user_domain):
             session.commit()
         session.close()
 
+
 @app.task
-def usom(user_url):
+def usom(user_url: str) -> str:
     session = Session()
     url_row = session.query(IOC).filter_by(ioc=user_url).first()
 
@@ -309,42 +325,42 @@ def usom(user_url):
             session.commit()
     else:
         if url_row:
-            url_row.usom = "The Domain provided is NOT in the USOM malicious domain database."
+            url_row.usom = (
+                "The Domain provided is NOT in the USOM malicious domain database."
+            )
             session.commit()
 
     session.close()
 
 
-#----------------------------------------------------FOR IP ADDRESS IOCS-------------------------------------------------------------
+# ----------------------------------------------------FOR IP ADDRESS IOCS-------------------------------------------------------------
 @app.task
-def virustotal_ip(user_ip):
+def virustotal_ip(user_ip: str) -> str:
     url = f"https://www.virustotal.com/api/v3/ip_addresses/{user_ip}"
-    headers = {
-        "accept": "application/json",
-        "x-apikey": VIRUSTOTAL_API
-    }
+    headers = {"accept": "application/json", "x-apikey": VIRUSTOTAL_API}
     response = requests.get(url, headers=headers)
 
     if response.status_code == 200:
         virustotal_save(response=response, ioc_name=user_ip)
 
+
 @app.task
-def ipinfo(user_ip):
+def ipinfo(user_ip: str) -> str:
     url = f"https://ipinfo.io/{user_ip}?token={IPINFO_API}"
     response = requests.get(url)
     if response.status_code == 200:
         data = response.json()
         ip_info = {
-                "ip": data["ip"],
-                "hostname": data["hostname"],
-                "city": data["city"],
-                "region": data["region"],
-                "country": data["country"],
-                "loc": data["loc"],
-                "org": data["org"],
-                "postal": data["postal"],
-                "timezone": data["timezone"]
-            }
+            "ip": data["ip"],
+            "hostname": data["hostname"],
+            "city": data["city"],
+            "region": data["region"],
+            "country": data["country"],
+            "loc": data["loc"],
+            "org": data["org"],
+            "postal": data["postal"],
+            "timezone": data["timezone"],
+        }
 
         ip_info_json = json.dumps(ip_info)
 
@@ -356,18 +372,12 @@ def ipinfo(user_ip):
             session.commit()
         session.close()
 
+
 @app.task
-def abuseipdb(user_ip):
+def abuseipdb(user_ip: str) -> str:
     url = "https://api.abuseipdb.com/api/v2/check"
-    params = {
-        "ipAddress": user_ip,
-        "maxAgeInDays": 90,
-        "verbose": True
-    }
-    headers = {
-        "Key": ABUSEIPDB_API,
-        "Accept": "application/json"
-    }
+    params = {"ipAddress": user_ip, "maxAgeInDays": 90, "verbose": True}
+    headers = {"Key": ABUSEIPDB_API, "Accept": "application/json"}
     response = requests.get(url, params=params, headers=headers)
     if response.status_code == 200:
         data = response.json()
@@ -384,7 +394,7 @@ def abuseipdb(user_ip):
             "hostnames": data["data"]["hostnames"],
             "total_reports": data["data"]["totalReports"],
             "num_distinct_users": data["data"]["numDistinctUsers"],
-            "last_reported_at": data["data"]["lastReportedAt"]
+            "last_reported_at": data["data"]["lastReportedAt"],
         }
 
         abuse_info_json = json.dumps(abuse_info)
@@ -396,34 +406,32 @@ def abuseipdb(user_ip):
             url_row.abuseipdb = abuse_info_json
             session.commit()
         session.close()
-    
+
+
 @app.task
-def greynoise(user_ip):
+def greynoise(user_ip: str) -> str:
     url = f"https://api.greynoise.io/v3/community/{user_ip}"
-    headers = {
-        "accept": "application/json",
-        "key": GREYNOISE_API
-    }
+    headers = {"accept": "application/json", "key": GREYNOISE_API}
     response = requests.get(url, headers=headers)
-    
+
     data = response.json()
     if "classification" in data:
         greynoise_info = {
-        "ip": data["ip"],
-        "noise": data["noise"],
-        "riot": data["riot"],
-        "classification": data["classification"],
-        "name": data["name"],
-        "link": data["link"],
-        "last_seen": data["last_seen"],
-        "message": data["message"]
+            "ip": data["ip"],
+            "noise": data["noise"],
+            "riot": data["riot"],
+            "classification": data["classification"],
+            "name": data["name"],
+            "link": data["link"],
+            "last_seen": data["last_seen"],
+            "message": data["message"],
         }
     else:
         greynoise_info = {
             "ip": data["ip"],
             "noise": data["noise"],
             "riot": data["riot"],
-            "message": data["message"]
+            "message": data["message"],
         }
 
     greynoise_info_json = json.dumps(greynoise_info)
@@ -436,12 +444,11 @@ def greynoise(user_ip):
         session.commit()
     session.close()
 
+
 @app.task
-def kaspersky_ip(user_ip):
+def kaspersky_ip(user_ip: str) -> str:
     url = f"https://opentip.kaspersky.com/api/v1/search/ip?request={user_ip}"
-    headers = { 
-        "x-api-key": KASPERSKY_API
-    }
+    headers = {"x-api-key": KASPERSKY_API}
     response = requests.request("GET", url, headers=headers)
 
     if response.status_code == 200:
@@ -457,7 +464,9 @@ def kaspersky_ip(user_ip):
             "asn": [
                 {
                     "number": asn.get("Number"),
-                    "description": asn.get("Description")[0] if asn.get("Description") else None
+                    "description": asn.get("Description")[0]
+                    if asn.get("Description")
+                    else None,
                 }
                 for asn in ip_whois.get("Asn", [])
             ],
@@ -466,8 +475,8 @@ def kaspersky_ip(user_ip):
                 "range_end": ip_whois["Net"].get("RangeEnd"),
                 "created": ip_whois["Net"].get("Created"),
                 "changed": ip_whois["Net"].get("Changed"),
-                "name": ip_whois["Net"].get("Name")
-            }
+                "name": ip_whois["Net"].get("Name"),
+            },
         }
 
         kaspersky_ip_info_json = json.dumps(kaspersky_ip_info)
@@ -480,10 +489,11 @@ def kaspersky_ip(user_ip):
             session.commit()
         session.close()
 
+
 @app.task
-def criminalip_ip(user_ip):
+def criminalip_ip(user_ip: str) -> str:
     url = f"https://api.criminalip.io/v1/ip/data?ip={user_ip}&full=true"
-    payload={}
+    payload = {}
     headers = {"x-api-key": CRIMINALIP_API}
 
     response = requests.request("GET", url, headers=headers, data=payload)
@@ -498,19 +508,17 @@ def criminalip_ip(user_ip):
             session.commit()
         session.close()
 
+
 @app.task
-def cloudflare_ip(user_ip):
+def cloudflare_ip(user_ip: str) -> str:
     url = "https://api.cloudflare.com/client/v4/radar/entities/asns/ip"
 
     headers = {
         "Content-Type": "application/json",
         "X-Auth-Email": CLOUDFLARE_EMAIL,
-        "X-Auth-Key": CLOUDFLARE_API
+        "X-Auth-Key": CLOUDFLARE_API,
     }
-    params = {
-        "format": "json",
-        "ip": user_ip
-    }
+    params = {"format": "json", "ip": user_ip}
     response = requests.request("GET", url, headers=headers)
     if response.status_code == 200:
         data = response.json()
@@ -523,8 +531,9 @@ def cloudflare_ip(user_ip):
             session.commit()
         session.close()
 
+
 @app.task
-def iplocation(user_ip):
+def iplocation(user_ip: str) -> str:
     url = f"https://api.iplocation.net/?ip={user_ip}"
     response = requests.request("GET", url)
     if response.status_code == 200:
@@ -538,8 +547,9 @@ def iplocation(user_ip):
             session.commit()
         session.close()
 
+
 @app.task
-def shodan(user_ip):
+def shodan(user_ip: str) -> str:
     url = f"https://api.shodan.io/shodan/host/{user_ip}?key={SHODAN_API}"
     response = requests.request("GET", url)
     if response.status_code == 200:
@@ -553,25 +563,21 @@ def shodan(user_ip):
         session.close()
 
 
-#----------------------------------------------------FOR FILES IOCS-------------------------------------------------------------
+# ----------------------------------------------------FOR FILES IOCS-------------------------------------------------------------
 @app.task
-def virustotal_file(user_hash):
+def virustotal_file(user_hash: str) -> str:
     url = f"https://www.virustotal.com/api/v3/files/{user_hash}"
-    headers = {
-        "accept": "application/json",
-        "x-apikey": VIRUSTOTAL_API
-    }
+    headers = {"accept": "application/json", "x-apikey": VIRUSTOTAL_API}
     response = requests.get(url, headers=headers)
 
     if response.status_code == 200:
         virustotal_save(response=response, ioc_name=user_hash)
 
+
 @app.task
-def kaspersky_file(user_hash):
+def kaspersky_file(user_hash: str) -> str:
     url = f"https://opentip.kaspersky.com/api/v1/search/hash?request={user_hash}"
-    headers = { 
-        "x-api-key": KASPERSKY_API
-    }
+    headers = {"x-api-key": KASPERSKY_API}
     response = requests.request("GET", url, headers=headers)
 
     if response.status_code == 200:
@@ -595,10 +601,10 @@ def kaspersky_file(user_hash):
                     "last_detect_date": detection.get("LastDetectDate"),
                     "description_url": detection.get("DescriptionUrl"),
                     "zone": detection.get("Zone"),
-                    "detection_name": detection.get("DetectionName")
+                    "detection_name": detection.get("DetectionName"),
                 }
                 for detection in detections_info
-            ]
+            ],
         }
 
         kaspersky_info_json = json.dumps(kaspersky_info)
@@ -611,13 +617,14 @@ def kaspersky_file(user_hash):
             session.commit()
         session.close()
 
+
 @app.task
-def hybridana_file(user_hash):
+def hybridana_file(user_hash: str) -> str:
     url = f"https://www.hybrid-analysis.com/api/v2/overview/{user_hash}"
     headers = {
         "api-key": HYBRIDANA_API,
         "accept": "application/json",
-        "user-agent": "Falcon Sandbox"
+        "user-agent": "Falcon Sandbox",
     }
     response = requests.request("GET", url, headers=headers)
 
@@ -660,12 +667,11 @@ def hybridana_file(user_hash):
             session.commit()
         session.close()
 
+
 @app.task
-def opswat(user_hash):
+def opswat(user_hash: str) -> str:
     url = f"https://api.metadefender.com/v5/threat-intel/file-analysis/{user_hash}"
-    headers = {
-        "apikey": OPSWAT_API
-    }
+    headers = {"apikey": OPSWAT_API}
 
     response = requests.request("GET", url, headers=headers)
 
@@ -694,7 +700,7 @@ def opswat(user_hash):
             "sub_platform": last_av_scan.get("sub_platform"),
             "total_avs": last_av_scan.get("total_avs"),
             "total_detected_avs": last_av_scan.get("total_detected_avs"),
-            "total_time": last_av_scan.get("total_time")
+            "total_time": last_av_scan.get("total_time"),
         }
 
         opswat_info_json = json.dumps(opswat_info)
@@ -707,13 +713,11 @@ def opswat(user_hash):
             session.commit()
         session.close()
 
+
 @app.task
-def opswat_file_reputation(user_hash):
+def opswat_file_reputation(user_hash: str) -> str:
     url = f"https://api.metadefender.com/v5/threat-intel/av-file-reputation/{user_hash}"
-    headers = {
-        "apikey": OPSWAT_API,
-        "extended": "1"
-    }
+    headers = {"apikey": OPSWAT_API, "extended": "1"}
     response = requests.request("GET", url, headers=headers)
 
     if response.status_code == 200:
@@ -741,7 +745,7 @@ def opswat_file_reputation(user_hash):
             "malware_families": data.get("malware_families", []),
             "malware_threat_names": data.get("malware_threat_names", []),
             "malware_types": data.get("malware_types", []),
-            "platforms": data.get("platforms", [])
+            "platforms": data.get("platforms", []),
         }
 
         opswat_info_json = json.dumps(opswat_info)
@@ -754,26 +758,26 @@ def opswat_file_reputation(user_hash):
             session.commit()
         else:
             # Hash doesn't exist in the database, create a new row
-            url_row = IOC(ioc=user_hash, ioc_type="Hash", opswat_file_reputation=opswat_info_json)
+            url_row = IOC(
+                ioc=user_hash, ioc_type="Hash", opswat_file_reputation=opswat_info_json
+            )
             session.add(url_row)
             session.commit()
 
         session.close()
 
-#----------------------------------------------------FOR EMAIL-------------------------------------------------------------
+
+# ----------------------------------------------------FOR EMAIL-------------------------------------------------------------
 @app.task
-def cloudflare_email(input_text):
+def cloudflare_email(input_text: str) -> str:
     url = "https://api.cloudflare.com/client/v4/radar/email/security/summary/malicious"
 
     headers = {
         "Content-Type": "application/json",
         "X-Auth-Email": CLOUDFLARE_EMAIL,
-        "X-Auth-Key": CLOUDFLARE_API
+        "X-Auth-Key": CLOUDFLARE_API,
     }
-    params = {
-        "format": "json",
-        "dateRange": "7d"
-    }
+    params = {"format": "json", "dateRange": "7d"}
 
     response = requests.get(url, headers=headers, params=params)
     if response.status_code == 200:
@@ -787,8 +791,9 @@ def cloudflare_email(input_text):
             session.commit()
         session.close()
 
+
 @app.task
-def ipqualityscore_email(user_email):
+def ipqualityscore_email(user_email: str) -> str:
     url = f"https://www.ipqualityscore.com/api/json/email/{IPQUALITYSCORE_API}/{user_email}"
     response = requests.post(url)
     if response.status_code == 200:
@@ -800,8 +805,9 @@ def ipqualityscore_email(user_email):
             session.commit()
         session.close()
 
+
 @app.task
-def abstract_email(user_email):
+def abstract_email(user_email: str) -> str:
     url = f"https://emailvalidation.abstractapi.com/v1/?api_key={ABSTRACT_API}&email={user_email}"
     response = requests.get(url)
     if response.status_code == 200:
@@ -813,8 +819,9 @@ def abstract_email(user_email):
             session.commit()
         session.close()
 
+
 @app.task
-def hunterio(user_email):
+def hunterio(user_email: str) -> str:
     url = f"https://api.hunter.io/v2/email-verifier?email={user_email}&api_key={HUNTERIO_API}"
     response = requests.get(url)
     if response.status_code == 200:

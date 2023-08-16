@@ -1,5 +1,6 @@
 from enum import Enum, auto
 
+
 class InputType(Enum):
     URL = auto()
     DOMAIN = auto()

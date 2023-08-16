@@ -1,15 +1,17 @@
 import os
+
 import jinja2
-from fastapi import FastAPI, Request, Form, File, UploadFile
-from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
-from fastapi.staticfiles import StaticFiles
 import uvicorn
-from utilities import check_input_type, calculate_file_hash, ioc_save_db
+from fastapi import FastAPI, File, Form, Request, UploadFile
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+
 from celery_base import app
-from models import Base, Session, IOC, engine
 from enums import InputType
 from enums_ops import input_task_mapping
+from models import IOC, Base, Session, engine
+from utilities import calculate_file_hash, check_input_type, ioc_save_db
 
 app_fastapi = FastAPI()
 
@@ -25,9 +27,7 @@ async def read_item(request: Request):
 
 @app_fastapi.post("/search", response_class=HTMLResponse)
 async def search(
-    request: Request,
-    input_text: str = Form(None),
-    input_file: UploadFile = File(None)
+    request: Request, input_text: str = Form(None), input_file: UploadFile = File(None)
 ):
     input_type = None
     sha256_hash = None
@@ -47,7 +47,7 @@ async def search(
 
         tasks_to_dispatch = input_task_mapping[InputType.FILE_HASH]
         for task in tasks_to_dispatch:
-            task.delay(sha256_hash)    
+            task.delay(sha256_hash)
 
     # Fetch data from the database for the input_text or sha256_hash
     session = Session()
@@ -60,7 +60,11 @@ async def search(
     session.close()
 
     # Generate the list of services dynamically
-    services = [column.name for column in IOC.__table__.columns if column.name != "ioc" and column.name != "ioc_type"]
+    services = [
+        column.name
+        for column in IOC.__table__.columns
+        if column.name != "ioc" and column.name != "ioc_type"
+    ]
 
     return templates.TemplateResponse(
         "result.html",
@@ -71,8 +75,8 @@ async def search(
             "sha256_hash": sha256_hash,
             "result": result,
             "services": services,
-            "results": result
-        }
+            "results": result,
+        },
     )
 
 
